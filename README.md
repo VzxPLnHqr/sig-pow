@@ -2,7 +2,7 @@
 proof of work via ecdsa signature length
 
 ## What?
-Robin Linus came up with an interesting encoding of proof of work (PoW) which can be verified directly within bitcoin script.
+An interesting way to encode and verify proof of work directly within bitcoin script (with no new opcodes needed) is via signature length. The idea is from Robin Linus [here](https://gist.github.com/RobinLinus/95de641ed1e3d9fde83bdcf5ac289ce9).
 
 Here is an attempt at a naive implementation of the idea.
 
