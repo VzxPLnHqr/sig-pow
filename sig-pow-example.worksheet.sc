@@ -54,7 +54,12 @@ assert(previousTx.txOut(0).amount == (10000 sat)) // looks like we received 1000
 //
 // Here we encapsulate this script template in an object called SigPowTx
 object SigPowTx {
-  val pubKeyScript = OP_SWAP :: OP_SIZE :: OP_CHECKSEQUENCEVERIFY :: OP_DROP :: OP_SWAP :: OP_CHECKSIGVERIFY :: Nil
+  val pubKeyScript = OP_SWAP :: OP_SIZE :: OP_CHECKSEQUENCEVERIFY :: OP_DROP :: OP_SWAP :: OP_CHECKSIGVERIFY :: OP_1 :: Nil
+                          //note: if we leave the needless OP_1 off, then this bitcoin-lib
+                          // scala library from ACINQ seems to think 
+                          // the stack would be empty. However, the script verifies 
+                          // just fine in btcdeb, possibly a bug in acinq bitcoin-lib?  
+
   def sigScript(sig:ByteVector, pubKey: PublicKey) = OP_PUSHDATA(sig) :: OP_PUSHDATA(pubKey) :: Nil
 }
 
@@ -95,7 +100,7 @@ assert(sigAlice.length >= 71)
 // sigScript's can sometimes be more complicated, but in this case the sigScript is very
 // simple. It just pushes Alice's signature, and Alice's public key onto the stack.
 val signedTx1 = unsignedTx1.updateSigScript(0,OP_PUSHDATA(sigAlice) :: OP_PUSHDATA(Alice.publicKey) :: Nil)
-
+signedTx1.isFinal(100L,100L)
 // We now have a signed transaction, but before we broadcast it, we need to check if it is valid.
 Transaction.correctlySpends(signedTx1,Seq(previousTx),ScriptFlags.MANDATORY_SCRIPT_VERIFY_FLAGS)
 // Great! If we got here without any errors being thrown, then the transaction passed the
@@ -113,14 +118,15 @@ val signedBroadcastableTx1_hex = signedTx1.toString
 
 object SigPowMiner {
   def buildClaimTx(prevOut: OutPoint, amount: Satoshi, pubKey: PublicKey) = Transaction(
-    version = 1L,
+    version = 2L, //note: version 2 is necessary here for OP_CSV to validate properly
     txIn = List(
-      TxIn(prevOut, signatureScript = Nil, sequence = 0xFFFFFFFFL)
+      TxIn(prevOut, signatureScript = Nil, sequence = 100L)
     ),
     txOut = List(
       TxOut(amount = amount, Script.write(Script.pay2pkh(pubKey)))
     ),
-    lockTime = 0L
+    //note: lockTime probably should be a function of signature length...still working through how to do that though
+    lockTime = 0L //setting to 100 since the transaction with the output it is spending has locktime 0
   )
   
   // here we assume that the passed in transaction has its first input
@@ -143,6 +149,11 @@ val unsignedClaim = SigPowMiner.buildClaimTx(OutPoint(signedTx1,0),10000 sat, Bo
 val signedClaim = SigPowMiner.signClaimTx(unsignedClaim,Bob.privateKey)
 
 // printing out the transactions invovled for easy paste into btcdeb too
+println("previousTx------->>>>>> spent by Tx1---------------->>>>>>------------------------")
+println(s"btcdeb --tx=$signedTx1 --txin=$previousTx")
+println("now spending Tx1 -------------------------------------")
 println(s"btcdeb --tx=$signedClaim --txin=$signedTx1")
+
+
 // getting closer but below we get a failure on op_verify
 Transaction.correctlySpends(signedClaim,Seq(signedTx1),ScriptFlags.MANDATORY_SCRIPT_VERIFY_FLAGS)
