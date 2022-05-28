@@ -54,7 +54,7 @@ assert(previousTx.txOut(0).amount == (10000 sat)) // looks like we received 1000
 //
 // Here we encapsulate this script template in an object called SigPowTx
 object SigPowTx {
-  val pubKeyScript = OP_SIZE :: OP_CHECKSEQUENCEVERIFY :: OP_CHECKSIGVERIFY :: Nil
+  val pubKeyScript = OP_SWAP :: OP_SIZE :: OP_CHECKSEQUENCEVERIFY :: OP_DROP :: OP_SWAP :: OP_CHECKSIGVERIFY :: Nil
   def sigScript(sig:ByteVector, pubKey: PublicKey) = OP_PUSHDATA(sig) :: OP_PUSHDATA(pubKey) :: Nil
 }
 
@@ -128,17 +128,21 @@ object SigPowMiner {
   // this input with the given private key
   def signClaimTx(tx: Transaction, privKey: PrivateKey): Transaction = {
     val sig = Transaction.signInput(tx,0,SigPowTx.pubKeyScript,SIGHASH_ALL, 10000 sat, SigVersion.SIGVERSION_BASE,privKey)
+    println(s"sig length: ${sig.length}")
+    println(s"sig hex: ${sig.toHex}")
     tx.updateSigScript(0,SigPowTx.sigScript(sig,privKey.publicKey))
   }
 }
 
 object Bob {
-    // bob's super secret private key
-    val privateKey = PrivateKey.fromBin(Crypto.sha256(ByteVector("abc".getBytes)))._1
+    // bob's super secret private key (same as Alice's)
+    val privateKey = PrivateKey.fromBase58("cRp4uUnreGMZN8vB7nQFX6XWMHU5Lc73HMAhmcDEwHfbgRS66Cqp", Base58.Prefix.SecretKeyTestnet)._1
 }
 
 val unsignedClaim = SigPowMiner.buildClaimTx(OutPoint(signedTx1,0),10000 sat, Bob.privateKey.publicKey)
 val signedClaim = SigPowMiner.signClaimTx(unsignedClaim,Bob.privateKey)
 
+// printing out the transactions invovled for easy paste into btcdeb too
+println(s"btcdeb --tx=$signedClaim --txin=$signedTx1")
 // getting closer but below we get a failure on op_verify
 Transaction.correctlySpends(signedClaim,Seq(signedTx1),ScriptFlags.MANDATORY_SCRIPT_VERIFY_FLAGS)
