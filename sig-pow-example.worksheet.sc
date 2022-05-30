@@ -61,6 +61,10 @@ object SigPowTx {
                           // just fine in btcdeb, possibly a bug in acinq bitcoin-lib?  
 
   def sigScript(sig:ByteVector, pubKey: PublicKey) = OP_PUSHDATA(sig) :: OP_PUSHDATA(pubKey) :: Nil
+
+  // for simplicity we set this up so that all miners are using the same private key to mine
+  // this might be the most fair way to do it
+  val privKey = PrivateKey.fromBase58("cRp4uUnreGMZN8vB7nQFX6XWMHU5Lc73HMAhmcDEwHfbgRS66Cqp", Base58.Prefix.SecretKeyTestnet)._1
 }
 
 // Next, we create a transaction where the sig script is the pubkey script of the tx
@@ -117,13 +121,17 @@ val signedBroadcastableTx1_hex = signedTx1.toString
 // consider them both SigPowMiner's and abstract out some functionality.
 
 object SigPowMiner {
-  def buildClaimTx(prevOut: OutPoint, amount: Satoshi, pubKey: PublicKey) = Transaction(
+  def buildClaimTx(prevOut: OutPoint, amount: Satoshi, pubKey: PublicKey, nonce: ByteVector) = Transaction(
     version = 2L, //note: version 2 is necessary here for OP_CSV to validate properly
     txIn = List(
       TxIn(prevOut, signatureScript = Nil, sequence = 100L)
     ),
     txOut = List(
-      TxOut(amount = amount, Script.write(Script.pay2pkh(pubKey)))
+      // first output is for claiming the sats
+      TxOut(amount = amount, Script.write(Script.pay2pkh(pubKey))),
+      // for now we just provie a nonce area via op_return, there are probably
+      // far more clever things we can do in the future instead
+      TxOut(amount = 0 sat, OP_RETURN :: OP_PUSHDATA(nonce) :: Nil)
     ),
     //note: lockTime probably should be a function of signature length...still working through how to do that though
     lockTime = 0L //setting to 100 since the transaction with the output it is spending has locktime 0
@@ -132,21 +140,23 @@ object SigPowMiner {
   // here we assume that the passed in transaction has its first input
   // (index 0) conforming to the SigPowTx template. We need to sign
   // this input with the given private key
-  def signClaimTx(tx: Transaction, privKey: PrivateKey): Transaction = {
-    val sig = Transaction.signInput(tx,0,SigPowTx.pubKeyScript,SIGHASH_ALL, 10000 sat, SigVersion.SIGVERSION_BASE,privKey)
-    println(s"sig length: ${sig.length}")
-    println(s"sig hex: ${sig.toHex}")
-    tx.updateSigScript(0,SigPowTx.sigScript(sig,privKey.publicKey))
+  // the default targetSigLength of 73 bytes means that no real work will
+  // be performed (the first signature should suffice)
+  // 
+  def signClaimTx(tx: Transaction): (Transaction,Int) = {
+    
+      val sig = Transaction.signInput(tx,0,SigPowTx.pubKeyScript,SIGHASH_ALL, 10000 sat, SigVersion.SIGVERSION_BASE, SigPowTx.privKey)
+      (tx.updateSigScript(0,SigPowTx.sigScript(sig,SigPowTx.privKey.publicKey)),sig.length.toInt)
   }
 }
 
 object Bob {
-    // bob's super secret private key (same as Alice's)
-    val privateKey = PrivateKey.fromBase58("cRp4uUnreGMZN8vB7nQFX6XWMHU5Lc73HMAhmcDEwHfbgRS66Cqp", Base58.Prefix.SecretKeyTestnet)._1
+    //val privateKey = PrivateKey.fromBase58("cRp4uUnreGMZN8vB7nQFX6XWMHU5Lc73HMAhmcDEwHfbgRS66Cqp", Base58.Prefix.SecretKeyTestnet)._1
+    val privateKey = PrivateKey.fromBin(Crypto.sha256(ByteVector("abc".getBytes)))._1
 }
 
-val unsignedClaim = SigPowMiner.buildClaimTx(OutPoint(signedTx1,0),10000 sat, Bob.privateKey.publicKey)
-val signedClaim = SigPowMiner.signClaimTx(unsignedClaim,Bob.privateKey)
+val unsignedClaim = SigPowMiner.buildClaimTx(OutPoint(signedTx1,0),10000 sat, Bob.privateKey.publicKey, ByteVector(Array[Byte](1)))
+val signedClaim = SigPowMiner.signClaimTx(unsignedClaim)
 
 // printing out the transactions invovled for easy paste into btcdeb too
 println("previousTx------->>>>>> spent by Tx1---------------->>>>>>------------------------")
@@ -154,6 +164,25 @@ println(s"btcdeb --tx=$signedTx1 --txin=$previousTx")
 println("now spending Tx1 -------------------------------------")
 println(s"btcdeb --tx=$signedClaim --txin=$signedTx1")
 
+// if the line below does not throw an error, then
+// the transaction is probably valid and can be broadcast (if it meets network standardness)
+Transaction.correctlySpends(signedClaim._1,Seq(signedTx1),ScriptFlags.MANDATORY_SCRIPT_VERIFY_FLAGS)
 
-// getting closer but below we get a failure on op_verify
-Transaction.correctlySpends(signedClaim,Seq(signedTx1),ScriptFlags.MANDATORY_SCRIPT_VERIFY_FLAGS)
+// a naive mining implementation
+def mine(outpoint: OutPoint, minerPubKey: PublicKey, targetSigLength: Int = 73): Transaction = {
+  def inner(nonce: BigInt):Transaction = {
+    val unsigned = SigPowMiner.buildClaimTx(outpoint,10000 sat, minerPubKey,ByteVector(nonce.toByteArray))
+    val signed = SigPowMiner.signClaimTx(unsigned)
+    if (signed._2 <= targetSigLength) {
+      println(s"found! nonce: $nonce")
+      signed._1
+    } else
+      inner(nonce + 1)
+  }
+  inner(BigInt(1))
+}
+
+def testMine(targetSigLength: Int) = mine(OutPoint(signedTx1,0),Bob.privateKey.publicKey,targetSigLength)
+
+// successfully mined signature with length less than or equal to 68 bytes! Took a couple minutes on a laptop.
+// 0200000001f6e2a439a8e02392095f0c3bf866aeca3d33625d8163c571cc908271264da77200000000674430410220324cc4c73b47357a3b9ee4c7aa906b910d4f89221c9d52e3fddfc88917f552b7021d46ea8179590fa7f6600f6e9e242b6a563a97ed63719227c4583a1ed098012103144d434e85140d4109814ac78491ffeae384c18e2225ba109ad25ff0e46eef65640000000210270000000000001976a914fa19739677ed143ba2dcabf535aebc043cd40cdc88ac0000000000000000056a0323e30d00000000
