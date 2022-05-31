@@ -124,7 +124,7 @@ object SigPowMiner {
   def buildClaimTx(prevOut: OutPoint, amount: Satoshi, pubKey: PublicKey, nonce: ByteVector) = Transaction(
     version = 2L, //note: version 2 is necessary here for OP_CSV to validate properly
     txIn = List(
-      TxIn(prevOut, signatureScript = Nil, sequence = 100L)
+      TxIn(prevOut, signatureScript = Nil, sequence = 100L ) // note: sequence must be greater than 73 (73 bytes is largest ecdsa signature)
     ),
     txOut = List(
       // first output is for claiming the sats
@@ -161,8 +161,8 @@ val signedClaim = SigPowMiner.signClaimTx(unsignedClaim)
 // printing out the transactions invovled for easy paste into btcdeb too
 println("previousTx------->>>>>> spent by Tx1---------------->>>>>>------------------------")
 println(s"btcdeb --tx=$signedTx1 --txin=$previousTx")
-println("now spending Tx1 -------------------------------------")
-println(s"btcdeb --tx=$signedClaim --txin=$signedTx1")
+println("now spending Tx1 with little work ~73byte sig -------------------------------------")
+println(s"btcdeb --tx=${signedClaim._1} --txin=$signedTx1")
 
 // if the line below does not throw an error, then
 // the transaction is probably valid and can be broadcast (if it meets network standardness)
@@ -185,4 +185,11 @@ def mine(outpoint: OutPoint, minerPubKey: PublicKey, targetSigLength: Int = 73):
 def testMine(targetSigLength: Int) = mine(OutPoint(signedTx1,0),Bob.privateKey.publicKey,targetSigLength)
 
 // successfully mined signature with length less than or equal to 68 bytes! Took a couple minutes on a laptop.
-// 0200000001f6e2a439a8e02392095f0c3bf866aeca3d33625d8163c571cc908271264da77200000000674430410220324cc4c73b47357a3b9ee4c7aa906b910d4f89221c9d52e3fddfc88917f552b7021d46ea8179590fa7f6600f6e9e242b6a563a97ed63719227c4583a1ed098012103144d434e85140d4109814ac78491ffeae384c18e2225ba109ad25ff0e46eef65640000000210270000000000001976a914fa19739677ed143ba2dcabf535aebc043cd40cdc88ac0000000000000000056a0323e30d00000000
+val txWith68byteSig = "0200000001f6e2a439a8e02392095f0c3bf866aeca3d33625d8163c571cc908271264da77200000000674430410220324cc4c73b47357a3b9ee4c7aa906b910d4f89221c9d52e3fddfc88917f552b7021d46ea8179590fa7f6600f6e9e242b6a563a97ed63719227c4583a1ed098012103144d434e85140d4109814ac78491ffeae384c18e2225ba109ad25ff0e46eef65640000000210270000000000001976a914fa19739677ed143ba2dcabf535aebc043cd40cdc88ac0000000000000000056a0323e30d00000000"
+println("-----------spending Tx1 with 68 byte signature-----------------")
+println(s"btcdeb --tx=$txWith68byteSig --txin=$signedTx1")
+
+/**
+ *  example run with 68 byte signature (took a couple minutes on laptop)
+  * btcdeb --tx=0200000001f6e2a439a8e02392095f0c3bf866aeca3d33625d8163c571cc908271264da77200000000674430410220324cc4c73b47357a3b9ee4c7aa906b910d4f89221c9d52e3fddfc88917f552b7021d46ea8179590fa7f6600f6e9e242b6a563a97ed63719227c4583a1ed098012103144d434e85140d4109814ac78491ffeae384c18e2225ba109ad25ff0e46eef65640000000210270000000000001976a914fa19739677ed143ba2dcabf535aebc043cd40cdc88ac0000000000000000056a0323e30d00000000 --txin=010000000114bc392e595b03e7fa0fbebe2ee2668930a9c1314c2d0d1d0d4bb60eb51822dd000000006a4730440220423df4038c681a1214df160119c7fb2bfb6a66c84cf9ce10949df81a36da8691022016ec048ff553a0d21c36dfd7e4dda07a1d9956b7f4b84cd8de3d9f16c853143b012103144d434e85140d4109814ac78491ffeae384c18e2225ba109ad25ff0e46eef65ffffffff011027000000000000077c82b2757cad5100000000
+  */
