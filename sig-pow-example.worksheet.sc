@@ -54,17 +54,23 @@ assert(previousTx.txOut(0).amount == (10000 sat)) // looks like we received 1000
 //
 // Here we encapsulate this script template in an object called SigPowTx
 object SigPowTx {
-  val pubKeyScript = OP_SWAP :: OP_SIZE :: OP_CHECKSEQUENCEVERIFY :: OP_DROP :: OP_SWAP :: OP_CHECKSIGVERIFY :: OP_1 :: Nil
-                          //note: if we leave the needless OP_1 off, then this bitcoin-lib
-                          // scala library from ACINQ seems to think 
-                          // the stack would be empty. However, the script verifies 
-                          // just fine in btcdeb, possibly a bug in acinq bitcoin-lib?  
+  val pubKeyScript = OP_SWAP :: OP_SIZE :: OP_CHECKSEQUENCEVERIFY :: OP_DROP :: OP_SWAP :: OP_CHECKSIG :: Nil
+                     // note: this script should leave a 1 on the stack
+                     // also, so as to reduce the risk of the funder doing a pre-computation of the work
+                     // the pubKeyScript could contain a push of a recent blockheader or blockhash
+                     // then later drop it. A better use of blockspace would be to include a second output
+                     // which is an op_return with the recent blockheader/blockhash.  
 
-  def sigScript(sig:ByteVector, pubKey: PublicKey) = OP_PUSHDATA(sig) :: OP_PUSHDATA(pubKey) :: Nil
-
+  
   // for simplicity we set this up so that all miners are using the same private key to mine
   // this might be the most fair way to do it
   val privKey = PrivateKey.fromBase58("cRp4uUnreGMZN8vB7nQFX6XWMHU5Lc73HMAhmcDEwHfbgRS66Cqp", Base58.Prefix.SecretKeyTestnet)._1
+
+  // the scriptSig which can redeem the work-locked output is extremely simple
+  // a further optimization might be to include the OP_PUSHDATA(privKey.publicKey)
+  // in the pubKeyScript
+  def sigScript(sig:ByteVector) = OP_PUSHDATA(sig) :: OP_PUSHDATA(privKey.publicKey) :: Nil
+
 }
 
 // Next, we create a transaction where the sig script is the pubkey script of the tx
@@ -146,7 +152,7 @@ object SigPowMiner {
   def signClaimTx(tx: Transaction): (Transaction,Int) = {
     
       val sig = Transaction.signInput(tx,0,SigPowTx.pubKeyScript,SIGHASH_ALL, 10000 sat, SigVersion.SIGVERSION_BASE, SigPowTx.privKey)
-      (tx.updateSigScript(0,SigPowTx.sigScript(sig,SigPowTx.privKey.publicKey)),sig.length.toInt)
+      (tx.updateSigScript(0,SigPowTx.sigScript(sig)),sig.length.toInt)
   }
 }
 
