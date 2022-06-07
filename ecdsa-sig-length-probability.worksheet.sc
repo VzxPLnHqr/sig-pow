@@ -210,26 +210,6 @@ val work_required_by_siglength: Map[Int,Real] =
     }.toMap
 
 work_required_by_siglength.toList.sortBy(_._1).toString
-// Comparing the results here with base 2 logarithm of the expected number of
-// trials, we see that the results are nominally similar. Interestingly, for 
-// the longest signature lengths the (71, 72, 73 bytes), the
-// number of bits of work required is initially nearly identical to the number
-// of trials required. However, as the signature length shrinks, the two numbers
-// diverge until what appears to be an asymptote around 1.44269 comprising the
-// difference.
-
-val comparison = 
-    work_required_by_siglength.toList.sortBy(_._1)
-    .reverse.map{case (x,w) => (x,w,expected_num_trials_log2_by_maxsiglength(x))}
-
-// calculate and print the difference between the two numbers
-println(comparison.map{case (x,bitsWork,nTrials) => (x, bitsWork - nTrials)})
-
-// Since the two numbers are technically different units, this comparison is 
-// meaningless, but it might give a hint as to an underlying deeper relationship.
-// We will not explore that further here and instead simply will utilize the 
-// number from the entropy calculation, as it seems to have a more solid 
-// information-theoretic foundation.
 
 // Our next task is to turn this mapping of required work vs. signature length
 // into a mapping of utxo locktime vs. work required. 
