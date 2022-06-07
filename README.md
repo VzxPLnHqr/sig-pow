@@ -6,6 +6,23 @@ An interesting way to encode and verify proof of work directly within bitcoin sc
 
 Here is an attempt at a naive implementation of the idea.
 
+### Example Use-case - mining competition for choice of genesis block
+1. Alice funds a UTXO with 1.0 BTC but which are "work-locked."
+2. The parameters of the work-lock are chosen such that a potential spender
+   (Bob) who contributes more work will be able to create a valid transaction
+   in every way except for the locktime.
+3. If Charlie contributes less work than Bob, he too can still create a valid
+   spending transaction for the UTXO, but would have a longer locktime than Bob,
+   and therefore would likely not be the ultimate spender.
+4. Bob, Charlie, Drake, and even Alice herself, could form a mining-pool of some
+   sort in a shared effort to create a valid spending transaction with a locktime
+   earlier than all others.
+5. In essence, it is a mining competition for the "genesis block" of what could 
+   become a side-chain or similar.
+6. This example needs more "work" in order to even make much sense yet, but we
+   have to start somewhere!
+
+
 ## Status
 Pre-proof-of-concept (aka probably broken)
 
