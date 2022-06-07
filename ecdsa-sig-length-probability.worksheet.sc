@@ -212,7 +212,10 @@ val work_required_by_siglength: Map[Int,Real] =
 work_required_by_siglength.toList.sortBy(_._1).toString
 
 // Our next task is to turn this mapping of required work vs. signature length
-// into a mapping of utxo locktime vs. work required. 
+// into a mapping of UTXO locktime vs. work required. Of course, a UTXO has
+// associated with it some amount of satoshis (1 bitcoin == 100,000,000 satoshis).
+// So we now need to join our information-theoretic deductions with some
+// economics. 
 
 // The longest possible utxo locktime in bitcoin right now is for the utxo to
 // be unspendable until block 5,000,0000 or later. This is an extremely long
@@ -220,15 +223,62 @@ work_required_by_siglength.toList.sortBy(_._1).toString
 // work-locked utxo, it is perhaps somewhat natural that if minimal work is
 // contributed, the maximum possible locktime should be enforced.
 
-// Similarly, if the maximum amount of work is contributed, then the utxo
+// Similarly, if the maximum amount of work is contributed, then the UTXO
 // should be spendable immediately. Taking these two points on our spectrum,
-// there is an infinite number of mappings we can choose. However, as we
-// think through this, the appeal of a linear mapping shines through. Why?
+// there is an infinite number of mappings we can choose. Linear? Exponential?
+// Something else?
+
+// The appeal of a linear mapping shines through. Why?
 // The expected work required per trial is a pure function of the signature
 // algorithm, and when an implementation of that algorithm is close to optimally
-// efficient (similar to bitoin mining asics), the energy cost per trial will
-// become nearly costant.
+// efficient (which is to eventually be expected, similar to how bitcoin mining
+// evolved from innefficient cpu mining to efficient acis), the work cost per 
+// trial will become nearly constant.
+
+// If we assume that the work cost per trial is constant, and we know the amount
+// of sats which are work-locked by the UTXO, then we may be able to do some sort
+// of net-present-value type of analysis in order to determine the necessary
+// parameters for the work-lock.
 
 // TODO: calculate example timelock parameter for mainnet bitcoin as of
 //       block number 739626.
+
+// TODO: can a mining pool be constructed so as to share in the work and share
+//       in the rewards? Can it be trustless? The miner of a work-locked utxo
+//       spends the work-locked coins as an input and, therefore (with current
+//       bitcoin consensus rules), can construct a spending transaction which
+//       has many outputs, and splits the reward with other miners. Of course
+//       in order to apportion the reward, the miner needs to know about other
+//       miners. 
+//       
+//       Let us imagine that a miner has solved a work-locked utxo. Here "solved"
+//       means that the miner now possesses what it believes to be the transaction
+//       with the soonest (shortest) locktime, relative to all other spending 
+//       transactions found by other miners. Even though the transaction is not
+//       yet broadcastable on the bitcoin network, similar to how bitcoin itself
+//       works, it may still be rationally in the best interest of the miner to
+//       propagate the transaction among other nodes which are participating in
+//       this strange "work-locked utxo" game. Some of these nodes may also be 
+//       miners, or, in other words, competition. 
+//       
+//       Here are a couple things a miner might consider doing when constructing
+//       a spending transaction for a work-locked utxo:
+//            1) Create an incentive for other miners to stop mining the original
+//               by include an additional output which is also work-locked
+//               yet with the work-lock less than that of the original utxo.
+//            2) Include one or more outputs paying participants which may have
+//               formed some sort of mining pool.
+//            3) Include a fee for mainchain bitcoin miners.
+//
+//       If we squint, we can see an inkling of a new blockchain which is somehow
+//       still associated with mainchain bitcoin, yet could have its own semantics.
+//       Even more interesting is that, in some ways, this new chain is pre-funded
+//       and only when the work-lock is surmounted does it actually interact with
+//       the mainchain. The mining race is ultimately for choice of genesis block 
+//       rather than for choice of the "next block." Even if participants are 
+//       building additional transactions, work-locked or otherwise, on top of
+//       this work-locked utxo, they risk all of those transactions becoming
+//       worthless if a different genesis block is ultimately chosen. It is a
+//       quite reckless and strange type of blockchain, but maybe it will be
+//       useful?
 
