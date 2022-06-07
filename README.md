@@ -19,6 +19,10 @@ Here is an attempt at a naive implementation of the idea.
    earlier than all others.
 5. In essence, it is a mining competition for the "genesis block" of what could 
    become a side-chain or similar.
+6. In some ways, for the period of time where the original utxo is still unspendable
+   (because enough work has not yet been contributed to move the timelock into the
+   present) it is actually already a side-chain, yet with the curious property of 
+   unwinding once a spending transaction becomes valid.
 6. This example needs more "work" in order to even make much sense yet, but we
    have to start somewhere!
 
