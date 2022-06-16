@@ -173,8 +173,11 @@ val p_length_lte_67_bytes = cdf(pmf_sig_length_bytes)(67).toDouble
 // In our case, for a maximum acceptable signature length k (in bytes), we can 
 // calculate the expected number of trials it took to find a such a signature.
 // Actually, here we calculate the base 2 logarithm of the number of trials.
+val expected_num_trials_by_maxsiglength: Map[Int,Real] =
+    cdf(pmf_sig_length_bytes).view.mapValues(p => ((Real(1)/p))).toMap
 val expected_num_trials_log2_by_maxsiglength: Map[Int,Real] =
-    cdf(pmf_sig_length_bytes).view.mapValues(p => ((Real(1)/p).log(2))).toMap
+    expected_num_trials_by_maxsiglength.view.mapValues(_.log(2)).toMap
+    
 
 expected_num_trials_log2_by_maxsiglength.toList.sortBy(_._1).mkString
 // For a signature length of maximum 73 bytes, it unsupprisingly, takes just 
@@ -200,7 +203,7 @@ expected_num_trials_log2_by_maxsiglength.toList.sortBy(_._1).mkString
 
 // Now, let us calculate the work required (in bits) to find a signature of
 // of size less than or equal to a given length (in bytes).
-val work_required_by_siglength: Map[Int,Real] = 
+val work_required_by_maxsiglength: Map[Int,Real] = 
     cdf(pmf_sig_length_bytes).view.mapValues{ p =>
         // the formula for the entropy of the geometric distribution
         // with parameter p is given by (1/p)*( -(1-p)*log(1-p) - p*log(p) )
@@ -209,7 +212,12 @@ val work_required_by_siglength: Map[Int,Real] =
         (Real(1)/p)*(-q*log(q,2) - p*log(p,2))
     }.toMap
 
-work_required_by_siglength.toList.sortBy(_._1).toString
+work_required_by_maxsiglength.toList.sortBy(_._1).toString
+
+// We can also calculate the work per trial directly.
+val work_required_per_trial_by_maxsiglength: Map[Int,Real] = 
+    work_required_by_maxsiglength.map { case (x,w) => (x,w/expected_num_trials_by_maxsiglength(x))}
+work_required_per_trial_by_maxsiglength.toList.sortBy(_._1).toString
 
 // Our next task is to turn this mapping of required work vs. signature length
 // into a mapping of UTXO locktime vs. work required. Of course, a UTXO has
@@ -239,6 +247,9 @@ work_required_by_siglength.toList.sortBy(_._1).toString
 // of sats which are work-locked by the UTXO, then we may be able to do some sort
 // of net-present-value type of analysis in order to determine the necessary
 // parameters for the work-lock.
+
+// Continuing briefly with this train of thought. Let W be the total expected
+// work required, in bits. Let R be the number of satoshis locked in the utxo.
 
 // TODO: calculate example timelock parameter for mainnet bitcoin as of
 //       block number 739626.
