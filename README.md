@@ -46,4 +46,4 @@ ammonite script](https://ammonite.io). To run it, you will need ammonite install
 This is easy to do if you use the Nix package manager.
 1. Install [Nix](https://nixos.org) package manager if not already installed.
 2. `nix-shell -p ammonite` will get you a shell with the `amm` command available so you can run the script.
-3. `amm -i sig-pow-example.worksheet.sc` will run the script (the `-i` may or may not be necessary depending on whether the script expects to accept user input from the console).
+3. `amm -p sig-pow-example.worksheet.sc` will run the script and drop you into a REPL session (remove the `-p` if you just want to run it and exit)
