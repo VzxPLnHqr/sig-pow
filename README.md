@@ -40,6 +40,13 @@ Then, the sidechain essentially evaporates.
 Pre-proof-of-concept (aka probably broken). Just some worksheets so far doing 
 some preliminary number crunching and transaction constructing.
 
+## Building / Usage (application)
+The application currently being built in this repository is very simple:
+1. use the [Nix](https://nixos.org) package manager to install dependencies by first installing Nix and then running `nix-shell -p scala` which will ensure that you have a decent version of scala/java installed
+2. for the build, we use the `mill` build tool [Mill Website](https://com-lihaoyi.github.io/mill), which also requires java
+3. a bootstrap script for mill has been checked into the repository already
+4. `./mill -i main.run` runs the `main` module of the `bulid.sc` project (the `-i` allows for `readLine` and `ctrl+C` to work properly)
+
 ## Building / Usage (worksheets)
 There are some exploratory worksheets written in scala as an [
 ammonite script](https://ammonite.io). To run it, you will need ammonite installed. 
