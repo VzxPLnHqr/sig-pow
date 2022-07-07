@@ -63,6 +63,27 @@ object Main extends IOApp.Simple {
         _ <- IO.println(s"this gives a range of $block_range possible nLocktimes")
         num_sigs = log(block_range.toDouble,2).ceil.toInt
         _ <- IO.println(s"we will need $num_sigs signatures to encode a number in this range")
-        _ <- IO.println(s"the private keys are:")
+        _ <- IO.println(s"the private keys (in hex) are:")
+        priv_keys <- generateKeysfromHashedSeed(num_sigs,h_seed)
+        _ <- IO.println(priv_keys.map(_.value.toHex).zipWithIndex.mkString("\n"))
     } yield ()
+
+
+    /**
+      * Helper functions
+      */
+
+    /**
+      * Deterministically generates a list of keys from a hashed seed. This is a
+      * very naive implementation right now that simply appends a byte to the seed
+      * and hashes it.
+      *
+      * @param num_keys
+      * @param hashed_seed
+      * @return
+      */
+    def generateKeysfromHashedSeed(num_keys: Int, hashed_seed: ByteVector32): IO[List[PrivateKey]] =
+        IO.parTraverseN(num_keys - 1)((1 to num_keys).toList){
+            i => IO(Crypto.sha256(hashed_seed.bytes ++ ByteVector(i.toByte))).map(k => PrivateKey.fromBin(k)._1)
+        }
 }
