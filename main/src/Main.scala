@@ -82,7 +82,6 @@ object Main extends IOApp.Simple {
         _ <- IO.println(s"this gives a range of $block_range possible nLocktimes")
         num_sigs <- IO(log(block_range.toDouble,2).ceil.toInt)
         _ <- IO.println(s"we will need $num_sigs signatures to encode a number in this range")
-        _ <- IO.println(s"the private keys and public keys (in hex) are:")
         priv_keys <- SigPow.generateKeysfromHashedSeed[IO](num_sigs,h_seed)
         _ <- IO.println("""| Now we need to calibrate your work-lock. A signature
                            | for each private key will be required to spend the
@@ -124,8 +123,8 @@ object Main extends IOApp.Simple {
                         """.stripMargin)
          custom_sizes <- promptBool("Do you want to pick your own sizes? (y/n) (default: n)",false)
          sig_sizes <- if (custom_sizes) {
-                        List.range(1,num_sigs).traverse{ i => prompt(s"max sig length for sig $i?").map(_.toInt)}
-                      } else List.range(1,num_sigs).traverse(_ => IO(70)) // 70 byte sigs are easy for testing purposes
+                        List.range(0,num_sigs).traverse{ i => prompt(s"max sig length for sig $i?").map(_.toInt)}
+                      } else List.range(0,num_sigs).traverse(_ => IO(70)) // 70 byte sigs are easy for testing purposes
          _ <- IO.println("""| Ok, here are the private keys, public keys, and max signature lengths
                             | needed in order to reduce the locktime for a spending transaction
                             | down to zero (no locktime). Good luck!
@@ -138,25 +137,92 @@ object Main extends IOApp.Simple {
          _ <- IO.println(s"redeem script (in hex): ${redeemScript.toHex} \n")
          pubKeyScript_p2wsh <- SigPow.pubKeyScript[IO](redeemScript)
          _ <- IO.println(s"p2wsh pubkey script (in hex): ${pubKeyScript_p2wsh.toHex}")
-         networkAddressPrefix <- prompt("What network? (mainnet, testnet, signet) (default: mainnet)",Base58.Prefix.ScriptAddress){
-                                      case "mainnet" => Base58.Prefix.ScriptAddress
-                                      case "testnet" => Base58.Prefix.ScriptAddressTestnet
-                                      case _ => Base58.Prefix.ScriptAddressSegnet
-                                }
-         address = Base58Check.encode(networkAddressPrefix,Crypto.hash160(pubKeyScript_p2wsh))
-         _ <- IO.println(s"Your work-locked address is: $address")
+         address_mainnet = Base58Check.encode(Base58.Prefix.ScriptAddress,Crypto.hash160(pubKeyScript_p2wsh))
+         address_testnet = Base58Check.encode(Base58.Prefix.ScriptAddressTestnet,Crypto.hash160(pubKeyScript_p2wsh))
+         address_signet = Base58Check.encode(Base58.Prefix.ScriptAddressSegnet,Crypto.hash160(pubKeyScript_p2wsh))
+         _ <- IO.println(s"mainnet address: $address_mainnet")
+         _ <- IO.println(s"testnet address: $address_testnet")
+         _ <- IO.println(s"signet address: $address_signet")
          sendFakeFunds <- promptBool("Shall we build a fake coinbase transaction that sends 1,000,000 sats to this address so you can debug? (default: y)",true)
          _ <- if(sendFakeFunds) {
-            SigPow.fakeFundingTx[IO](1000000L,pubKeyScript_p2wsh).flatMap(t => 
+            SigPow.fakeP2WSHFundingTx[IO](1000000L,redeemScript).flatMap(t => 
               IO.println(s"funding transaction txid: ${t.txid}") >>
-              IO.println(s"the work-locked sats are at output index 0") >> 
+              IO.println(s"the work-locked sats are at output index 0 wrapped in P2WSH") >> 
               IO.println(s"funding transaction (hex): $t")) >>
-              IO.println("1,000,000 sats now (fake) work-locked. Good luck!")
+              IO.println("1,000,000 sats now (fake) work-locked!")
          } else { IO.unit }
-         _ <- IO.println("Done.")
+         fakeSigs <- SigPow.fakeSignatures[IO](priv_keys,sig_sizes.map(_ => 70)) //note: fake sig sizes here
+         //_ <- IO.println(s"here are $num_sigs fake sig_i:pubkey_i pairs (useful for debugging with btcdeb):")
+         //_ <- IO.println(fakeSigs.map{ case (_, sig_i, pub_i) => s"${sig_i.toHex}:$pub_i"}.mkString(","))
+         //_ <- IO.println(s"here is a fake stack of signatures (useful for debugging with btcdeb):")
+         //_ <- IO.println(fakeSigs.map{ case (_, sig_i, _) => sig_i.toHex }.reverse.mkString(" "))
+         _ <- IO.println("Done. Now go unlock them! (re-run this program with the unlock command).")
+         _ <- spendWorkLockedOutput
     } yield ()
 
-    val spendWorkLockedOutput: IO[Unit] = IO.unit
+    val spendWorkLockedOutput: IO[Unit] = for {
+      _ <- IO.println("""| So, you know about a work-locked utxo that you would like to
+                         | unlock. You will need a few things to do so:
+                         |
+                         |  1. the full transaction (in hex) which funded 
+                         |     work-locked output.
+                         |
+                         |  2. the output index in that transaction which contains
+                         |     the worklocked sats (typically this is index 0)
+                         |
+                         |  3. the "seed string" which was used to generate the private 
+                         |     keys needed to sign the spending transaction which
+                         |     we will construct (and attempt to mine) here.
+                         |
+                         |  4. a list of addresses and ammounts which you would 
+                         |     like to send the funds too.
+                         |
+                         |""".stripMargin)
+      fundingTx <- prompt("Please enter the hex for the full funding transaction:").map(hex => Transaction.read(hex))
+      fundingTxid = fundingTx.txid
+      _ <- IO.println(s"got txid: ${fundingTxid.toHex}")
+      fundingOutputIndex <- prompt("What is the output index of the funding transaction which has the work-lock? (default: 0)",0)(_.toInt)
+      fundingOutpoint <- IO(OutPoint(fundingTx,fundingOutputIndex))
+      worklockedSatsAmt = fundingTx.txOut(fundingOutputIndex).amount.toLong
+      _ <- IO.println(s"output index $fundingOutputIndex has $worklockedSatsAmt sats work-locked!")
+      seedString <- prompt("What is the seed string which was used to generate the private keys? (default: abc)","abc")(s => s)
+      h_seed = Crypto.sha256(ByteVector(seedString.getBytes("UTF-8")))
+      num_sigs <- prompt("How many private keys do we need? (default: 23)",23)(_.toInt)
+      sig_sizes <- prompt("What are the signature lengths, in bytes, for each of the keys? Example: 70,69,68...70 (default: all 70)",List.fill(num_sigs)(70))(_.split(",").toList.map(_.toInt))
+      priv_keys <- SigPow.generateKeysfromHashedSeed[IO](num_sigs,h_seed)
+      _ <- IO.println("(index_i, private_key_i, pub_key_i, max_siglength_bytes_i)")
+      _ <- priv_keys.zip(sig_sizes).zipWithIndex
+                .traverse{ case ((k,s),i) => IO.println(s"($i, ${k.value.toHex}, ${k.publicKey}, $s)")}
+      minLocktime <- prompt("What is the minimum locktime for the redeemScript (default: 0)",0)(_.toInt)
+      redeemScript <- SigPow.redeemScript[IO](priv_keys.map(_.publicKey).zip(sig_sizes),minLocktime)
+      _ <- IO.println(s"reconstructed redeem script (in hex): ${redeemScript.toHex} \n")
+      pubKeyScript_p2wsh <- SigPow.pubKeyScript[IO](redeemScript)
+      _ <- IO.println(s"reconstructed the p2wsh pubkey script (in hex): ${pubKeyScript_p2wsh.toHex}")
+      _ <- IO.println(s"-------- now lets start mining ------")
+      _ <- IO.println("""| You now need to specify a "tartet" locktime which you want
+                         | your spending transaction to achieve. If you want to be able to
+                         | broadcast/spend these work-locked coins immediately, that
+                         | means you want a nLocktime of 0 blocks. Note, however,
+                         | that a nLocktime of 0 will mean that you will need to put enough
+                         | work into *each* signature such that the bit associated with that
+                         | signature length in the binary encoding of the locktime calculated
+                         | by the redeemScript will be a zero bit. If all signature lengths
+                         | are short enough, and the redeemScript does not have a minimum
+                         | nLocktime set (you have already been asked this), then you will 
+                         | be able to spend the work-locked coins immediately by broadcasting
+                         | to the network.
+                         | """".stripMargin)
+      targetLocktime <- prompt("What is the target locktime (in blocks) you would like to achieve? (default: 0)",0L)(_.toLong)
+      spendToPubKeyScriptBytes <- prompt("\nWhich pubkeyScript would you like to send the unlocked coins to? (default: 0014fa19739677ed143ba2dcabf535aebc043cd40cdc)",ByteVector.fromHex("0014fa19739677ed143ba2dcabf535aebc043cd40cdc").get)(ByteVector.fromHex(_).get)
+      spendToAmt <- prompt(s"Of the $worklockedSatsAmt sats, how many to send to that address? (default: $worklockedSatsAmt)",worklockedSatsAmt)(_.toLong)
+      unsignedSpendingTx <- SigPow.unsignedSpendingTx[IO](fundingOutpoint,spendToPubKeyScriptBytes,targetLocktime,spendToAmt)
+      _ <- IO.println(s"unsigned spending transaction (hex): $unsignedSpendingTx")
+      signatures <- priv_keys.traverse{k => SigPow.signInput[IO](unsignedSpendingTx,fundingOutputIndex,pubKeyScript_p2wsh,Satoshi(worklockedSatsAmt),k)}
+      witness <- SigPow.witness[IO](redeemScript,signatures)
+      signedSpendingTx = unsignedSpendingTx.updateWitness(0,witness)
+      _ <- IO.println(s"SIGNED spending transaction (hex): $signedSpendingTx")
+      _ <- IO.println("Done.")
+    } yield ()
 
     /**
       * Helper functions

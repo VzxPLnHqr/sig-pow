@@ -22,7 +22,7 @@ object SigPow {
       * @return
       */
     def generateKeysfromHashedSeed[F[_] : Monad](num_keys: Int, hashed_seed: ByteVector32): F[List[PrivateKey]] =
-        List.range(start = 1, end = num_keys).traverse{
+        List.range(start = 0, end = num_keys).traverse{
             i => Monad[F].pure(Crypto.sha256(hashed_seed.bytes ++ ByteVector(i.toByte))).map(k => PrivateKey.fromBin(k)._1)
         }
 
@@ -34,20 +34,30 @@ object SigPow {
       * <pubkey_i> <sig_i> 
       */
     def redeemScript[F[_]: Monad]( sigLengths: List[(PublicKey,Int)], minLocktimeBlocks: Long = 0L ) = sigLengths.zipWithIndex.traverse{
-        case ((pubKey, sigLength),i) => (
-            OP_TOALTSTACK :: //move the first item (the nLocktime accumulator to the altstack)
-            OP_SIZE :: //assumes stack is .... <pubkey i> <sig_i>
-            OP_PUSHDATA(Script.encodeNumber(sigLength)) :: 
-            OP_LESSTHANOREQUAL :: 
-            OP_IF :: OP_PUSHDATA(Script.encodeNumber(0L)) :: // work must have been done!
-            OP_ELSE :: OP_PUSHDATA(Script.encodeNumber(spire.math.pow(2L,i.toLong))) :: // work not done, add corresponding amount to nLocktime
-            OP_ENDIF :: 
-            OP_FROMALTSTACK :: OP_ADD :: //assumes that what is on top of the stack now is the accumulated nLocktime so far
-            OP_PUSHDATA(pubKey) :: OP_CHECKSIGVERIFY ::
-            Nil
-        ).pure[F]}.map(_.flatten)
-        .map(_.prepended(OP_PUSHDATA(Script.encodeNumber(minLocktimeBlocks)))) // before execution put `minLocktimeBlocks` at the beginning (which will get moved to the alt stack and accumulate)
-        .map(_.appended(OP_CHECKLOCKTIMEVERIFY)) // after execution, should just have nLocktime on the stack now
+        case ((pubKey, sigLength),i) => {
+            // for the lower powers of 2, need slightly different encoding
+            val powerOf2 = i match {
+                case 0 => Script.write(OP_1 :: Nil)
+                case 1 => Script.write(OP_2 :: Nil)
+                case 2 => Script.write(OP_4 :: Nil)
+                case 3 => Script.write(OP_8 :: Nil)
+                case 4 => Script.write(OP_16 :: Nil)
+                case n => Script.encodeNumber(spire.math.pow(2.toLong,n.toLong))
+            }
+            (
+                OP_SIZE :: //assumes stack is .... <pubkey i> <sig_i>
+                OP_PUSHDATA(Script.encodeNumber(sigLength)) :: 
+                OP_LESSTHANOREQUAL :: 
+                OP_IF :: OP_PUSHDATA(Script.encodeNumber(0L)) :: // work must have been done!
+                OP_ELSE :: OP_PUSHDATA(powerOf2) :: // work not done, add corresponding amount to nLocktime
+                OP_ENDIF :: 
+                OP_FROMALTSTACK :: OP_ADD :: OP_TOALTSTACK ::
+                OP_PUSHDATA(pubKey) :: OP_CHECKSIGVERIFY ::
+                Nil
+            )
+        }.pure[F]}.map(_.flatten)
+        .map(script => OP_PUSHDATA(Script.encodeNumber(minLocktimeBlocks)) :: OP_TOALTSTACK :: Nil ++ script) // before execution put `minLocktimeBlocks` on the alt stack
+        .map(_ ++ (OP_FROMALTSTACK :: OP_CHECKLOCKTIMEVERIFY :: Nil)) // after execution, get accumulated nLocktime from the altstack
         .map(Script.write(_))
 
     /**
@@ -65,16 +75,50 @@ object SigPow {
         }
 
     def pubKeyScript[F[_] : Monad](redeemScript: ByteVector) =
-        Script.write(Script.pay2wsh(redeemScript)).pure[F] //Script.write(OP_0 :: OP_PUSHDATA(Crypto.sha256(redeemScript)) :: Nil).pure[F]
+        Script.write(Script.pay2wsh(redeemScript)).pure[F]
 
     def witness[F[_] : Monad](redeemScript: ByteVector, signatures: List[ByteVector]) = 
-        ScriptWitness(signatures.toSeq.appended(redeemScript)).pure[F]
+        ScriptWitness(signatures.reverse.toSeq.appended(redeemScript)).pure[F]
 
-    def fakeFundingTx[F[_] : Monad](amountSats: Long, pubKeyScript: ByteVector) = 
+    def fakeP2WSHFundingTx[F[_] : Monad](amountSats: Long, redeemScript: ByteVector):F[Transaction] = 
         Transaction(
-            version=1, 
+            version=1L, 
             txIn = Seq(TxIn.coinbase(OP_1 :: OP_1 :: Nil)), 
-            txOut = Seq(TxOut(Satoshi(amountSats),pubKeyScript)),
+            txOut = Seq(TxOut(Satoshi(amountSats),Script.pay2wsh(redeemScript))),
             lockTime = 0L
+        ).pure[F]
+
+    def fakeSignatures[F[_] : Monad](privKeys: List[PrivateKey], sigSizes: List[Int]) = 
+        privKeys.zip(sigSizes).zipWithIndex.traverse{ case ((privKey,sigSize),i) =>
+            (s"sig$i,pubkey$i",ByteVector(Array.fill(sigSize)(i.toByte)),privKey.publicKey).pure[F]    
+        }
+
+    def unsignedSpendingTx[F[_] : Monad](
+                            outpoint: OutPoint,
+                            spendToPubKeyScriptBytes: ByteVector,
+                            targetLocktime: Long,
+                            spendToAmt: Long): F[Transaction] = {
+        Transaction(
+            version = 2L, // necessary for OP_CLTV
+            txIn = Seq(TxIn(outpoint, signatureScript = ByteVector.empty, sequence = 0xFFFFFFFFL)),
+            txOut = Seq(TxOut(Satoshi(spendToAmt),spendToPubKeyScriptBytes)),
+            lockTime = targetLocktime
+        ).pure[F]
+    }
+
+    def signInput[F[_]:Monad](
+            unsignedTx: Transaction, 
+            inputIndex: Int, 
+            pubKeyScript: ByteVector, 
+            inputAmt: Satoshi, 
+            privKey: PrivateKey): F[ByteVector] = 
+        Transaction.signInput(
+                tx = unsignedTx,
+                inputIndex = inputIndex,
+                previousOutputScript = pubKeyScript,
+                SIGHASH_ALL,
+                inputAmt,
+                SigVersion.SIGVERSION_WITNESS_V0,
+                privKey
         ).pure[F]
 }
