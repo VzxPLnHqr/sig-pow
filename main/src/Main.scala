@@ -13,6 +13,21 @@ import cats.effect.syntax.all._
 
 object Main extends IOApp.Simple {
     val run = for {
+        _ <- IO.println("""| Please enter one of the following commands:
+                            | lock - This will guide through creating a work-locked utxo.
+                            |
+                            | unlock - If you already have information about a work-locked utxo
+                            |          and want to try to mine (solve/spend) it, choose this option.
+                            |
+                            |""".stripMargin)
+        cmd = prompt("enter comand (default: lock)","lock")(s => s)
+        _ <- cmd.flatMap {
+          case "lock" => createWorkLockedOutput
+          case "unlock" => spendWorkLockedOutput
+        }
+    } yield ()
+
+    val createWorkLockedOutput = for {
         _ <- IO.println("""| This program will create an output (and an address
                            | you can send funds to) which is work-locked.
                            | A work-lock is a way of encumbering a utxo such that
@@ -58,7 +73,7 @@ object Main extends IOApp.Simple {
                            | the work-lock output could not easily pre-compute a
                            | solution.
                         """.stripMargin)
-        seed <- prompt("What seed (recent block header?) shall we use to generate the private key(s)?")
+        seed <- prompt("What seed (recent block header?) shall we use to generate the private key(s)? (default: abc)","abc")(s => s)
         h_seed = Crypto.sha256(ByteVector(seed.getBytes("UTF-8")))
         _ <- IO.println(s"Great! Using sha256($seed) == ${h_seed.toHex} as seed")
         cur_blockheight <- prompt("What is the current block height? (default: 744609)", 744609)(_.toInt)
@@ -67,9 +82,8 @@ object Main extends IOApp.Simple {
         _ <- IO.println(s"this gives a range of $block_range possible nLocktimes")
         num_sigs <- IO(log(block_range.toDouble,2).ceil.toInt)
         _ <- IO.println(s"we will need $num_sigs signatures to encode a number in this range")
-        _ <- IO.println(s"the private keys (in hex) are:")
-        priv_keys <- generateKeysfromHashedSeed(num_sigs,h_seed)
-        _ <- priv_keys.map(_.value.toHex).zipWithIndex.traverse{case (k,i) => IO.println(s"$i. $k")}
+        _ <- IO.println(s"the private keys and public keys (in hex) are:")
+        priv_keys <- SigPow.generateKeysfromHashedSeed[IO](num_sigs,h_seed)
         _ <- IO.println("""| Now we need to calibrate your work-lock. A signature
                            | for each private key will be required to spend the
                            | locked sats. Imagine processing these signatures in
@@ -108,13 +122,41 @@ object Main extends IOApp.Simple {
                            | you with a reasonable default.
                            |
                         """.stripMargin)
-         custom_sizes <- promptBool("Do you want to pick your own sizes? (y/n)")
+         custom_sizes <- promptBool("Do you want to pick your own sizes? (y/n) (default: n)",false)
          sig_sizes <- if (custom_sizes) {
                         List.range(1,num_sigs).traverse{ i => prompt(s"max sig length for sig $i?").map(_.toInt)}
                       } else List.range(1,num_sigs).traverse(_ => IO(70)) // 70 byte sigs are easy for testing purposes
-         _ <- IO.println(s"Ok, using signature sizes:") >> sig_sizes.zipWithIndex.traverse{ case (s,i) => IO.println(s"$i. $s bytes")}
+         _ <- IO.println("""| Ok, here are the private keys, public keys, and max signature lengths
+                            | needed in order to reduce the locktime for a spending transaction
+                            | down to zero (no locktime). Good luck!
+                            |""".stripMargin)
+         _ <- IO.println("(index_i, private_key_i, pub_key_i, max_siglength_bytes_i)")
+         _ <- priv_keys.zip(sig_sizes).zipWithIndex
+                .traverse{ case ((k,s),i) => IO.println(s"($i, ${k.value.toHex}, ${k.publicKey}, $s)")}
+         minLocktime <- prompt("Is there a minimum nLocktime you want to enforce? (default: 0)",0)(_.toInt)
+         redeemScript <- SigPow.redeemScript[IO](priv_keys.map(_.publicKey).zip(sig_sizes),minLocktime)
+         _ <- IO.println(s"redeem script (in hex): ${redeemScript.toHex} \n")
+         pubKeyScript_p2wsh <- SigPow.pubKeyScript[IO](redeemScript)
+         _ <- IO.println(s"p2wsh pubkey script (in hex): ${pubKeyScript_p2wsh.toHex}")
+         networkAddressPrefix <- prompt("What network? (mainnet, testnet, signet) (default: mainnet)",Base58.Prefix.ScriptAddress){
+                                      case "mainnet" => Base58.Prefix.ScriptAddress
+                                      case "testnet" => Base58.Prefix.ScriptAddressTestnet
+                                      case _ => Base58.Prefix.ScriptAddressSegnet
+                                }
+         address = Base58Check.encode(networkAddressPrefix,Crypto.hash160(pubKeyScript_p2wsh))
+         _ <- IO.println(s"Your work-locked address is: $address")
+         sendFakeFunds <- promptBool("Shall we build a fake coinbase transaction that sends 1,000,000 sats to this address so you can debug? (default: y)",true)
+         _ <- if(sendFakeFunds) {
+            SigPow.fakeFundingTx[IO](1000000L,pubKeyScript_p2wsh).flatMap(t => 
+              IO.println(s"funding transaction txid: ${t.txid}") >>
+              IO.println(s"the work-locked sats are at output index 0") >> 
+              IO.println(s"funding transaction (hex): $t")) >>
+              IO.println("1,000,000 sats now (fake) work-locked. Good luck!")
+         } else { IO.unit }
+         _ <- IO.println("Done.")
     } yield ()
 
+    val spendWorkLockedOutput: IO[Unit] = IO.unit
 
     /**
       * Helper functions
@@ -122,8 +164,9 @@ object Main extends IOApp.Simple {
 
     def prompt(msg: String): IO[String] = IO.print(msg + " ") >> IO.readLine
     def prompt[A](msg: String, default: A)(f: => String => A): IO[A] = promptWithDefault(msg,default)(f)
-    def promptBool(msg: String): IO[Boolean] = prompt(msg).map(_.toUpperCase()).map{
-      case "Y" | "yes" | "1" | "y" => true
+    def promptBool(msg: String, default: Boolean): IO[Boolean] = prompt(msg).map(_.toUpperCase()).map{
+      case "Y" | "yes" | "1" => true
+      case "" => default
       case _ => false
     }
     def promptWithDefault[A](msg: String, default: A)(f: => String => A) = prompt(msg).flatMap{
@@ -131,18 +174,4 @@ object Main extends IOApp.Simple {
       case s => IO(f(s))
     }
 
-
-    /**
-      * Deterministically generates a list of keys from a hashed seed. This is a
-      * very naive implementation right now that simply appends a byte to the seed
-      * and hashes it.
-      *
-      * @param num_keys
-      * @param hashed_seed
-      * @return
-      */
-    def generateKeysfromHashedSeed(num_keys: Int, hashed_seed: ByteVector32): IO[List[PrivateKey]] =
-        List.range(start = 1, end = num_keys).traverse{
-            i => IO(Crypto.sha256(hashed_seed.bytes ++ ByteVector(i.toByte))).map(k => PrivateKey.fromBin(k)._1)
-        }
 }
