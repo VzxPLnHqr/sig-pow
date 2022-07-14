@@ -77,6 +77,14 @@ object SigPow {
             case sig => OP_PUSHDATA(sig) :: Nil
         }
 
+    /**
+      * Encode the redeemScript as a p2wsh pubKeyScript. To turn this
+      * pubKeyScript into an address, the first two bytes need to be
+      * removed, and then the remainder can be bech32 encoded.
+      *
+      * @param redeemScript
+      * @return
+      */
     def pubKeyScript[F[_] : Monad](redeemScript: ByteVector) =
         Script.write(Script.pay2wsh(redeemScript)).pure[F]
 
@@ -112,16 +120,38 @@ object SigPow {
     def signInput[F[_]:Monad](
             unsignedTx: Transaction, 
             inputIndex: Int, 
-            pubKeyScript: ByteVector, 
+            previousOutputScript: ByteVector, 
             inputAmt: Satoshi, 
             privKey: PrivateKey): F[ByteVector] = 
         Transaction.signInput(
                 tx = unsignedTx,
                 inputIndex = inputIndex,
-                previousOutputScript = pubKeyScript,
+                previousOutputScript = previousOutputScript,
                 SIGHASH_ALL,
                 inputAmt,
                 SigVersion.SIGVERSION_WITNESS_V0,
                 privKey
         ).pure[F]
+
+    /**
+      * Take an unsigned Tx and sign it with this set of private keys.
+      * The keys must be in the correct order specified by the OutputScript.
+      * 
+      * 
+      * @param unsignedTx
+      * @param inputIndex
+      * @param previousOutputScript
+      * @param inputAmt
+      * @param privKeys
+      * @return
+      */
+    /*def signTx[F[_]:Monad](
+            unsignedTx: Transaction,
+            inputIndex: Int,
+            previousOutputScript: ByteVector,
+            inputAmt: Satoshi,
+            privKeys: List[PrivateKey]): F[Transaction] = privKeys.zipWithIndex.traverse{
+                case (privKey, i) => Monad[F].pure(???)
+            }
+    */
 }
