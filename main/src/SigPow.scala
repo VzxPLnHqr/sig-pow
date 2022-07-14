@@ -56,8 +56,11 @@ object SigPow {
                 Nil
             )
         }.pure[F]}.map(_.flatten)
-        .map(script => OP_PUSHDATA(Script.encodeNumber(minLocktimeBlocks)) :: OP_TOALTSTACK :: Nil ++ script) // before execution put `minLocktimeBlocks` on the alt stack
-        .map(_ ++ (OP_FROMALTSTACK :: OP_CHECKLOCKTIMEVERIFY :: Nil)) // after execution, get accumulated nLocktime from the altstack
+        // before execution put `minLocktimeBlocks` on the alt stack
+        .map(script => OP_PUSHDATA(Script.encodeNumber(minLocktimeBlocks)) :: OP_TOALTSTACK :: Nil ++ script)
+        // after execution, get accumulated nLocktime from the altstack, check locktime. 
+        // If success we add 1 in case 0 was left on stack. Need non-zero, one-item stack at the end.
+        .map(_ ++ (OP_FROMALTSTACK :: OP_CHECKLOCKTIMEVERIFY :: OP_1ADD :: Nil)) 
         .map(Script.write(_))
 
     /**
@@ -78,7 +81,7 @@ object SigPow {
         Script.write(Script.pay2wsh(redeemScript)).pure[F]
 
     def witness[F[_] : Monad](redeemScript: ByteVector, signatures: List[ByteVector]) = 
-        ScriptWitness(ByteVector.empty :: signatures.reverse.toSeq.appended(redeemScript)).pure[F]
+        ScriptWitness(signatures.reverse.toSeq.appended(redeemScript)).pure[F]
 
     def fakeP2WSHFundingTx[F[_] : Monad](amountSats: Long, redeemScript: ByteVector):F[Transaction] = 
         Transaction(
@@ -100,7 +103,7 @@ object SigPow {
                             spendToAmt: Long): F[Transaction] = {
         Transaction(
             version = 1L,
-            txIn = Seq(TxIn(outpoint, signatureScript = ByteVector.empty, sequence = 0xffffffffL)),
+            txIn = Seq(TxIn(outpoint, signatureScript = ByteVector.empty, sequence = 1L)), 
             txOut = Seq(TxOut(Satoshi(spendToAmt),spendToPubKeyScriptBytes)),
             lockTime = targetLocktime
         ).pure[F]

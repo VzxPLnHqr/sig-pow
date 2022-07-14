@@ -12,6 +12,9 @@ import cats.effect._
 import cats.effect.syntax.all._
 
 object Main extends IOApp.Simple {
+
+    //for testing purposes, a "default" sig length
+    val defaultMaxSigLength = 73 // 73 bytes means any signature should pass max size check
     val run = for {
         _ <- IO.println("""| Please enter one of the following commands:
                             | lock - This will guide through creating a work-locked utxo.
@@ -143,7 +146,7 @@ object Main extends IOApp.Simple {
          custom_sizes <- promptBool("Do you want to pick your own sizes? (y/n) (default: n)",false)
          sig_sizes <- if (custom_sizes) {
                         List.range(0,num_sigs).traverse{ i => prompt(s"max sig length for sig $i?").map(_.toInt)}
-                      } else List.range(0,num_sigs).traverse(_ => IO(70)) // 70 byte sigs are easy for testing purposes
+                      } else List.range(0,num_sigs).traverse(_ => IO(defaultMaxSigLength)) // set at top of application (used for testing)
          _ <- IO.println("""| Ok, here are the private keys, public keys, and max signature lengths
                             | needed in order to reduce the locktime for a spending transaction
                             | down to zero (no locktime). Good luck!
@@ -155,13 +158,9 @@ object Main extends IOApp.Simple {
          redeemScript <- SigPow.redeemScript[IO](priv_keys.map(_.publicKey).zip(sig_sizes),minLocktime)
          _ <- IO.println(s"redeem script (in hex): ${redeemScript.toHex} \n")
          pubKeyScript_p2wsh <- SigPow.pubKeyScript[IO](redeemScript)
-         _ <- IO.println(s"p2wsh pubkey script (in hex): ${pubKeyScript_p2wsh.toHex}")
-         address_mainnet = Base58Check.encode(Base58.Prefix.ScriptAddress,Crypto.hash160(pubKeyScript_p2wsh))
-         address_testnet = Base58Check.encode(Base58.Prefix.ScriptAddressTestnet,Crypto.hash160(pubKeyScript_p2wsh))
-         address_signet = Base58Check.encode(Base58.Prefix.ScriptAddressSegnet,Crypto.hash160(pubKeyScript_p2wsh))
-         _ <- IO.println(s"mainnet address: $address_mainnet")
-         _ <- IO.println(s"testnet address: $address_testnet")
-         _ <- IO.println(s"signet address: $address_signet")
+         _ <- IO.println(s"p2wsh pubkey script (in hex, ${pubKeyScript_p2wsh.size} bytes): ${pubKeyScript_p2wsh.toHex}")
+         _ <- IO.println(s"testnet p2wsh segwit address: ${Bech32.encodeWitnessAddress("tb",0,pubKeyScript_p2wsh.drop(2))}")
+         _ <- IO.println(s"mainnet p2wsh segwit address: ${Bech32.encodeWitnessAddress("bc",0,pubKeyScript_p2wsh.drop(2))}")
          sendFakeFunds <- promptBool("Shall we build a fake coinbase transaction that sends 1,000,000 sats to this address so you can debug? (default: y)",true)
          fundingTx <- if(sendFakeFunds) {
               SigPow.fakeP2WSHFundingTx[IO](1000000L,redeemScript).flatTap(t => 
@@ -194,7 +193,7 @@ object Main extends IOApp.Simple {
       seedString <- prompt("What is the seed string which was used to generate the private keys? (default: abc)","abc")(s => s)
       h_seed = Crypto.sha256(ByteVector(seedString.getBytes("UTF-8")))
       num_sigs <- prompt("How many private keys do we need? (default: 23)",23)(_.toInt)
-      sig_sizes <- prompt("What are the signature lengths, in bytes, for each of the keys? Example: 70,69,68...70 (default: all 70)",List.fill(num_sigs)(70))(_.split(",").toList.map(_.toInt))
+      sig_sizes <- prompt(s"What are the signature lengths, in bytes, for each of the keys? Example: 70,62,68..73,70 (default is all sigs $defaultMaxSigLength bytes)",List.fill(num_sigs)(defaultMaxSigLength))(_.split(",").toList.map(_.toInt))
       priv_keys <- SigPow.generateKeysfromHashedSeed[IO](num_sigs,h_seed)
       _ <- IO.println("(index_i, private_key_i, pub_key_i, max_siglength_bytes_i)")
       _ <- priv_keys.zip(sig_sizes).zipWithIndex
@@ -219,7 +218,9 @@ object Main extends IOApp.Simple {
                          | to the network.
                          | """".stripMargin)
       targetLocktime <- prompt("What is the target locktime (in blocks) you would like to achieve? (default: 0)",0L)(_.toLong)
-      spendToPubKeyScriptBytes <- prompt("\nWhich pubkeyScript would you like to send the unlocked coins to? (default: 0014fa19739677ed143ba2dcabf535aebc043cd40cdc)",ByteVector.fromHex("0014fa19739677ed143ba2dcabf535aebc043cd40cdc").get)(ByteVector.fromHex(_).get)
+      spendToPubKeyScriptBytes <- prompt("\nWhich pubkeyScript (in hex) would you like to send the unlocked coins to? (default: 0014fa19739677ed143ba2dcabf535aebc043cd40cdc)",ByteVector.fromHex("0014fa19739677ed143ba2dcabf535aebc043cd40cdc").get)(ByteVector.fromHex(_).get)
+      _ <- IO.println(s"(mainnet) address: ${Bech32.encodeWitnessAddress("bc",0,spendToPubKeyScriptBytes.drop(2))}")
+      _ <- IO.println(s"OR (testnet) address: ${Bech32.encodeWitnessAddress("tb",0,spendToPubKeyScriptBytes.drop(2))}")
       spendToAmt <- prompt(s"Of the $worklockedSatsAmt sats, how many to send to that address? (default: $worklockedSatsAmt)",worklockedSatsAmt)(_.toLong)
       unsignedSpendingTx <- SigPow.unsignedSpendingTx[IO](fundingOutpoint,spendToPubKeyScriptBytes,targetLocktime,spendToAmt)
       _ <- IO.println(s"unsigned spending transaction (hex): $unsignedSpendingTx")
