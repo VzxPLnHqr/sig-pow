@@ -78,7 +78,7 @@ object SigPow {
         Script.write(Script.pay2wsh(redeemScript)).pure[F]
 
     def witness[F[_] : Monad](redeemScript: ByteVector, signatures: List[ByteVector]) = 
-        ScriptWitness(signatures.reverse.toSeq.appended(redeemScript)).pure[F]
+        ScriptWitness(ByteVector.empty :: signatures.reverse.toSeq.appended(redeemScript)).pure[F]
 
     def fakeP2WSHFundingTx[F[_] : Monad](amountSats: Long, redeemScript: ByteVector):F[Transaction] = 
         Transaction(
@@ -99,8 +99,8 @@ object SigPow {
                             targetLocktime: Long,
                             spendToAmt: Long): F[Transaction] = {
         Transaction(
-            version = 2L, // necessary for OP_CLTV
-            txIn = Seq(TxIn(outpoint, signatureScript = ByteVector.empty, sequence = 0xFFFFFFFFL)),
+            version = 1L,
+            txIn = Seq(TxIn(outpoint, signatureScript = ByteVector.empty, sequence = 0xffffffffL)),
             txOut = Seq(TxOut(Satoshi(spendToAmt),spendToPubKeyScriptBytes)),
             lockTime = targetLocktime
         ).pure[F]

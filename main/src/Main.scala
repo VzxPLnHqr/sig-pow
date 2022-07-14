@@ -23,7 +23,26 @@ object Main extends IOApp.Simple {
         cmd = prompt("enter comand (default: lock)","lock")(s => s)
         _ <- cmd.flatMap {
           case "lock" => createWorkLockedOutput
-          case "unlock" => spendWorkLockedOutput
+          case "unlock" =>
+            IO.println("""| So, you know about a work-locked utxo that you would like to
+                          | unlock. You will need a few things to do so:
+                          |
+                          |  1. the full transaction (in hex) which funded 
+                          |     work-locked output.
+                          |
+                          |  2. the output index in that transaction which contains
+                          |     the worklocked sats (typically this is index 0)
+                          |
+                          |  3. the "seed string" which was used to generate the private 
+                          |     keys needed to sign the spending transaction which
+                          |     we will construct (and attempt to mine) here.
+                          |
+                          |  4. a list of addresses and ammounts which you would 
+                          |     like to send the funds too.
+                          |
+                          |""".stripMargin) >> 
+            prompt("Enter full hex for funding transaction:")
+              .map(Transaction.read(_)).flatMap(t => spendWorkLockedOutput(t))
         }
     } yield ()
 
@@ -144,41 +163,28 @@ object Main extends IOApp.Simple {
          _ <- IO.println(s"testnet address: $address_testnet")
          _ <- IO.println(s"signet address: $address_signet")
          sendFakeFunds <- promptBool("Shall we build a fake coinbase transaction that sends 1,000,000 sats to this address so you can debug? (default: y)",true)
-         _ <- if(sendFakeFunds) {
-            SigPow.fakeP2WSHFundingTx[IO](1000000L,redeemScript).flatMap(t => 
-              IO.println(s"funding transaction txid: ${t.txid}") >>
-              IO.println(s"the work-locked sats are at output index 0 wrapped in P2WSH") >> 
-              IO.println(s"funding transaction (hex): $t")) >>
-              IO.println("1,000,000 sats now (fake) work-locked!")
-         } else { IO.unit }
-         fakeSigs <- SigPow.fakeSignatures[IO](priv_keys,sig_sizes.map(_ => 70)) //note: fake sig sizes here
+         fundingTx <- if(sendFakeFunds) {
+              SigPow.fakeP2WSHFundingTx[IO](1000000L,redeemScript).flatTap(t => 
+                IO.println(s"funding transaction txid: ${t.txid}") >>
+                IO.println(s"the work-locked sats are at output index 0 wrapped in P2WSH") >> 
+                IO.println(s"funding transaction (hex): $t") >>
+                IO.println("1,000,000 sats now (fake) work-locked!"))
+          } else { 
+                prompt("You now need to fund the work-lock! Please enter the full hex for the funding transaction:").map(hex => Transaction.read(hex))
+          }
+         //fakeSigs <- SigPow.fakeSignatures[IO](priv_keys,sig_sizes.map(_ => 70)) //note: fake sig sizes here
          //_ <- IO.println(s"here are $num_sigs fake sig_i:pubkey_i pairs (useful for debugging with btcdeb):")
          //_ <- IO.println(fakeSigs.map{ case (_, sig_i, pub_i) => s"${sig_i.toHex}:$pub_i"}.mkString(","))
          //_ <- IO.println(s"here is a fake stack of signatures (useful for debugging with btcdeb):")
          //_ <- IO.println(fakeSigs.map{ case (_, sig_i, _) => sig_i.toHex }.reverse.mkString(" "))
-         _ <- IO.println("Done. Now go unlock them! (re-run this program with the unlock command).")
-         _ <- spendWorkLockedOutput
-    } yield ()
+         _ <- IO.println("End locking procedure.")
+         continue <- promptBool("continue to unlocking procedure? (y/n) (default: y)",true)
+         _ <- if(continue) spendWorkLockedOutput(fundingTx) else IO.unit
+    } yield (fundingTx)
 
-    val spendWorkLockedOutput: IO[Unit] = for {
-      _ <- IO.println("""| So, you know about a work-locked utxo that you would like to
-                         | unlock. You will need a few things to do so:
-                         |
-                         |  1. the full transaction (in hex) which funded 
-                         |     work-locked output.
-                         |
-                         |  2. the output index in that transaction which contains
-                         |     the worklocked sats (typically this is index 0)
-                         |
-                         |  3. the "seed string" which was used to generate the private 
-                         |     keys needed to sign the spending transaction which
-                         |     we will construct (and attempt to mine) here.
-                         |
-                         |  4. a list of addresses and ammounts which you would 
-                         |     like to send the funds too.
-                         |
-                         |""".stripMargin)
-      fundingTx <- prompt("Please enter the hex for the full funding transaction:").map(hex => Transaction.read(hex))
+    def spendWorkLockedOutput(fundingTx: Transaction): IO[Transaction] = for {
+      _ <- IO.unit
+      //fundingTx <- prompt("Please enter the hex for the full funding transaction:").map(hex => Transaction.read(hex))
       fundingTxid = fundingTx.txid
       _ <- IO.println(s"got txid: ${fundingTxid.toHex}")
       fundingOutputIndex <- prompt("What is the output index of the funding transaction which has the work-lock? (default: 0)",0)(_.toInt)
@@ -199,7 +205,7 @@ object Main extends IOApp.Simple {
       pubKeyScript_p2wsh <- SigPow.pubKeyScript[IO](redeemScript)
       _ <- IO.println(s"reconstructed the p2wsh pubkey script (in hex): ${pubKeyScript_p2wsh.toHex}")
       _ <- IO.println(s"-------- now lets start mining ------")
-      _ <- IO.println("""| You now need to specify a "tartet" locktime which you want
+      _ <- IO.println("""| You now need to specify a "target" locktime which you want
                          | your spending transaction to achieve. If you want to be able to
                          | broadcast/spend these work-locked coins immediately, that
                          | means you want a nLocktime of 0 blocks. Note, however,
@@ -217,12 +223,14 @@ object Main extends IOApp.Simple {
       spendToAmt <- prompt(s"Of the $worklockedSatsAmt sats, how many to send to that address? (default: $worklockedSatsAmt)",worklockedSatsAmt)(_.toLong)
       unsignedSpendingTx <- SigPow.unsignedSpendingTx[IO](fundingOutpoint,spendToPubKeyScriptBytes,targetLocktime,spendToAmt)
       _ <- IO.println(s"unsigned spending transaction (hex): $unsignedSpendingTx")
-      signatures <- priv_keys.traverse{k => SigPow.signInput[IO](unsignedSpendingTx,fundingOutputIndex,pubKeyScript_p2wsh,Satoshi(worklockedSatsAmt),k)}
+      signatures <- priv_keys.traverse{k => SigPow.signInput[IO](unsignedSpendingTx,fundingOutputIndex,redeemScript,Satoshi(worklockedSatsAmt),k)}
+      _ <- priv_keys.map(_.publicKey.value.toHex).zip(signatures).traverse{ case (pub,sig) => IO.println(s"$pub --sig--> ${sig.toHex}")}
       witness <- SigPow.witness[IO](redeemScript,signatures)
       signedSpendingTx = unsignedSpendingTx.updateWitness(0,witness)
       _ <- IO.println(s"SIGNED spending transaction (hex): $signedSpendingTx")
       _ <- IO.println("Done.")
-    } yield ()
+      _ <- IO(Transaction.correctlySpends(signedSpendingTx,Seq(fundingTx),ScriptFlags.STANDARD_SCRIPT_VERIFY_FLAGS)).onError(e => IO.println(e))
+    } yield signedSpendingTx
 
     /**
       * Helper functions
