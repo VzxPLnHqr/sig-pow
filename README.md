@@ -41,7 +41,7 @@ More work will produce tickets with a sooner nLocktime.
 In essence, this is **provably fair proof of future proof of work (PoFpOW?)**.
 
 #### Live (Signet) Example
-This first output (index 0) of [this transaction on signet](https://mempool.space/signet/tx/f946a09f1f33b92506c39993532070247eae36921c70543ff386c578a78397b1) funds a naive work-lock which 
+The first output (index 0) of [this transaction on signet](https://mempool.space/signet/tx/f946a09f1f33b92506c39993532070247eae36921c70543ff386c578a78397b1) funds a naive work-lock which 
 requires 4 signatures to each be less than or equal 73 bytes. All such bitcoin
 signatures meet this criteria, so it was a trivial work-lock to "solve," but you
 can get an idea of how it works by inspecting the [spending transaction](https://mempool.space/signet/tx/695b89db80ff904b1cd89243a6588b5dc882d921f7faf6496ed9bc87bc318990).
@@ -125,4 +125,6 @@ This is easy to do if you use the Nix package manager.
 3. `amm -p sig-pow-example.worksheet.sc` will run the script and drop you into a REPL session (remove the `-p` if you just want to run it and exit)
 
 ## References/Acknowledgements
-1. ...
+1. Robin Linus for showing that it is still (barely) possible to express and verify proof of work within bitcoin script today.
+2. Ruben Somsen for bitcoin wizardry and maintaining a helpful Telegram group of other fellow wizards.
+3. B___ S___ for mental gymnastics and code golfing with bitcoin script.
