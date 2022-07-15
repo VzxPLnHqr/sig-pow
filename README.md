@@ -32,10 +32,19 @@ mining will produce a valid spending transaction (a ticket in this lottery).
 
 The ticket is a valid transaction in every way except that the nLocktime might 
 prevent it from being broadcast and included in a block for, say, another 200 years!
+The exact amount of time depends on the parameters of the work-lock, but it is 
+possible to create work-locks which are short (easy) or nearly impossible (long,
+taking centuries, if ever, to unlock).
 
 More work will produce tickets with a sooner nLocktime.
 
 In essence, this is **provably fair proof of future proof of work (PoFpOW?)**.
+
+#### Live (Signet) Example
+This first output (index 0) of [this transaction on signet](https://mempool.space/signet/tx/f946a09f1f33b92506c39993532070247eae36921c70543ff386c578a78397b1) funds a naive work-lock which 
+requires 4 signatures to each be less than or equal 73 bytes. All such bitcoin
+signatures meet this criteria, so it was a trivial work-lock to "solve," but you
+can get an idea of how it works by inspecting the [spending transaction](https://mempool.space/signet/tx/695b89db80ff904b1cd89243a6588b5dc882d921f7faf6496ed9bc87bc318990).
 
 ## How?
 1. Alice creates `N` private keys (`priv_key_i` for `i` in `0..N`), and makes them 
@@ -58,37 +67,47 @@ In essence, this is **provably fair proof of future proof of work (PoFpOW?)**.
    input for an `OP_CHECKLOCKTIMEVERIFY` calculation, is interesting.
 8. Calibrated appropriately, more work will unlock the output sooner. 
 
-#### Example (future) Use-case - trustless sidechain
+## Status
+Pre-proof-of-concept (aka probably broken). Just some worksheets so far doing 
+some preliminary number crunching and transaction constructing.
+
+### Example Additional Use-cases for Work-locks
+#### (future) Use-case - spam prevention
+Work-a-lot-tery tickets are just another representation of PoW, but which has been
+encoded in a bitcoin transaction.
+1. Alice, Bob, and Charlie, each operate their own websites/servcies. 
+2. To prevent spam/DoS attacks, they require patrons to occassionally submit
+   work-a-lot-tery tickets with locktimes below a threshold.
+3. Merchants like Alice, Bob, and Charlie can individually, or collectively, adjust
+   up/down their acceptable locktime threshholds. They can do this with a formal
+   protocol, or simply via word of mouth.
+4. The above assumes that the tickets are created (mined) by customers and kept 
+   private, but that a customer might present the same ticket to multiple merchants.
+   For further protection, merchants could require that a ticket includes payment
+   to them in one of the outputs.
+  
+#### (future) Use-case - trustless sidechain
 We might be able to use this concept to create a sidechain which is trustless. 
 The mining competition to unlock work-locked utxo(s) is structured such that the 
 incentive for miners is to simultaneously peg-out all the side-chain participants.
 Then, the sidechain essentially evaporates.
-1. this example needs more explanation!
 
-#### Example (future) Use-case - mining competition for choice of genesis block
+##### mining competition for side-chain peg-out
 1. Alice funds a UTXO with 1.0 BTC but which are "work-locked."
-2. The parameters of the work-lock are chosen such that a potential spender
-   (Bob) who contributes more work will be able to create a valid transaction
-   in every way except for the locktime.
-3. If Charlie contributes less work than Bob, he too can still create a valid
-   spending transaction for the UTXO, but would have a longer locktime than Bob,
-   and therefore would likely not be the ultimate spender.
-4. Bob, Charlie, Drake, and even Alice herself, could form a mining-pool of some
-   sort in a shared effort to create a valid spending transaction with a locktime
-   earlier than all others.
-5. In essence, it is a mining competition for the "genesis block" of what could 
-   become a side-chain or similar.
-6. In some ways, for the period of time where the original utxo is still unspendable
-   (because enough work has not yet been contributed to move the timelock into the
-   present) it is actually already a side-chain, yet with the curious property of 
-   unwinding once a spending transaction becomes valid.
-6. This example needs more "work" in order to even make much sense yet, but we
-   have to start somewhere!
-
-
-## Status
-Pre-proof-of-concept (aka probably broken). Just some worksheets so far doing 
-some preliminary number crunching and transaction constructing.
+2. Bob, Charlie, Drake, and even Alice herself, could form a mining-pool of some
+   sort in a shared effort to unlock the funds.
+3. In doing so, they are essentially forming a side-chain which can have its own 
+   consensus protocol, paying each other (in the sidechain) for contributed work, etc.
+5. At some point, their work will pay off and the work-lock will be solved.
+   Depending on the parameters of the work-lock, this might be in the far future! Or
+   Regardless, the rules of the sidechain were such that "if this sidechain dissolves 
+   immediately, would we all feel fairly rewarded?" is a true statement.
+6. In essence, it is a mining competition for the "final block" (the opposite
+   of a "genesis block") of a side-chain.
+7. The consensus rules of the side-chain can be somewhat arbitrary, so long as the
+   latest "state" of the sidechain includes the current "best yet" peg-out transaction.
+   The parameters of the work-lock and the game theory / consensus design of the side
+   chain work in tandem to (in expectation) produce this outcome.
 
 ## Building / Usage (application)
 The application currently being built in this repository is very simple:
