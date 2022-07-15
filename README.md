@@ -125,6 +125,6 @@ This is easy to do if you use the Nix package manager.
 3. `amm -p sig-pow-example.worksheet.sc` will run the script and drop you into a REPL session (remove the `-p` if you just want to run it and exit)
 
 ## References/Acknowledgements
-1. Robin Linus for showing that it is still (barely) possible to express and verify proof of work within bitcoin script today.
+1. Robin Linus for showing that it is possible to express and verify proof of work within bitcoin script today.
 2. Ruben Somsen for bitcoin wizardry and maintaining a helpful Telegram group of other fellow wizards.
-3. B___ S___ for mental gymnastics and code golfing with bitcoin script.
+3. Brill Saton for mental gymnastics and code golfing with bitcoin script.
