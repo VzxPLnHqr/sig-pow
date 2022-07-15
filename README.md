@@ -26,11 +26,24 @@ is an effective filtering mechanism. Work-locks, even in this inefficient signat
 encoding, are easy for bitcoin nodes to verify relative to the work that went into unlocking them.
 
 ### A work-a-lot-tery!
+Working to unlock a work-locked output is somewhat like traditional bitcoin mining,
+but possibly better! With a properly calibrated work-lock, even a little bit of 
+mining will produce a valid spending transaction (a ticket in this lottery).
 
+The ticket is a valid transaction in every way except that the nLocktime might 
+prevent it from being broadcast and included in a block for, say, another 200 years!
+
+More work will produce tickets with a sooner nLocktime.
+
+In essence, this is **provably fair proof of future proof of work (PoFpOW?)**.
 
 ## How?
 1. Alice creates `N` private keys (`priv_key_i` for `i` in `0..N`), and makes them 
-   available to Bob (or the whole world).
+   available to Bob (or the whole world). 
+2. These keys can be derived from a seed string of her choosing. If the seed 
+   string includes information about a point in time (such as a recent bitcoin 
+   block header), then we can have confidence that even Alice, the creator and/or
+   funder of the worklock, will have no real advantage over any other participants.
 2. For each key, Alice assigns a maximum acceptable signature length (in bytes) `max_sig_length_i`.
 3. Alice can use the signature lengths to construct an `N` bit number, in base 2,
    as follows:
