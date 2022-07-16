@@ -67,6 +67,104 @@ can get an idea of how it works by inspecting the [spending transaction](https:/
    input for an `OP_CHECKLOCKTIMEVERIFY` calculation, is interesting.
 8. Calibrated appropriately, more work will unlock the output sooner. 
 
+### Calibrating a Work-Lock
+Work-locks as described here are somewhat convoluted in practice, considering the
+reasonably simple thing they are trying to achieve. This is mostly due to some limits
+in the expressiveness of bitcoin script. Tis is not intended to be construed
+as a complaint about bitcoin per se, as there are many good reasons why bitcoin 
+script is less expressive than other languages. Rather, working within bitcoin 
+script is simply a design constraint which we try to workaround here when developing
+and calibrating a work-lock. 
+
+#### Quantifying the Work
+
+##### A quick Proof of Work Refresher
+
+The most common use of PoW in bitcoin is visible in the (double) sha256 hash
+of a block header. There are some parameters included in the blockheader which
+verifying nodes unpack and use to verify a block. However, in essence, what they
+are actually doing is simply taking `y = sha256(sha256(block_header))`, interpreting
+`y` (a 32-byte = 256-bit vector) as a 256-bit number. Of course, there are many
+ways 256 bits can be interpreted as a number. Bitcoin takes a simple appraoch and
+treats the bits of `y` in sequence `bit_256,bit_255,bit_254,bit253,...bit3,bit2,bit1,bit0`.
+Each bit in the sequence is raised to its respective power of two, and the results
+are summed together. If `y` is less then another 256-bit number `t`, commonly called
+the target, which is encoded in the blockheader, then the block has met the proof
+of work requirement. Nodes can then move on and start verifying the other information
+which the blockheader committed to, such as transactions.
+
+Now, let us consider the above process in reverse. If we know `t`, and we are confident
+that the hash function `h(x) = sha256(sh256(x))`, is not "broken" and its outputs are
+(generally accpeted to be) uniformly distributed, then we can calculate the probability
+`p_t` that a chosen input `x` (the block header) will meet the proof of work requirement.
+This probability is `p_t = t / (2^k - 1)` where, for `h = sha256`, `k = 256`.
+
+With `p_t` in hand, we can then calculate the expected number of trials it should take
+somebody to find such an `x`. Because the trials are considered to be independent,
+this is modeled by the [Geometric Distribution](https://en.wikipedia.org/wiki/Geometric_distribution).
+The expected expected number of trials needed is `num_trials = 1 / p_t`. For small `p_t`,
+`num_trials` can be a very large number, so sometimes `log_2(num_trials)` is used
+instead. 
+
+Here, instead of `log2(num_trials)` we like to instead calculate the Shannon entropy 
+of the geometric distribution with parameter `p_t` and use this number as our 
+definition of "work." Conveniently, the Shannon entropy gives a result in bits, and
+we can think about it, informally, as related to the logarithm of the "effective
+number of trials," which is not quite the same as "expected number of trials," but
+we will not dwell on that here. 
+
+More importantly, by using the entropy as our proxy for calculating "work," we can
+define a function `w(p) = (-(1-p)*log2(1-p) - p*log2(p)) / p` to calculate the
+the "effective amount of work" (in bits) it takes, to flip a bias coin with 
+probability `P(HEADS) = p` and `P(TAILS) = 1 - p`, until a heads is achieved.
+
+The double sha256 hash of a recent bitcoin block header has 76 zeroes as its most 
+significant bits. Running the calculation here for that same block header gives,
+conveniently, a `p` which corresponds to a `w(p) = 76 bits`. Math is neat!
+
+##### What about non-uniform distributions, like lengths of ecdsa signatures?
+One advantage of viewing and calculating "work" in the way outlined above is that
+we can lift the concept into other distributions and yet still make (somewhat) reasonable
+comparisons across them. For example, while we know the work required to mine a
+recent bitcoin block is 76 bits of work. We can then ask, how short does an ecdsa
+signature need to be for us to have confidence that it took *at least 76 bits of work*
+to find such a signature? The details, with some other irrelevent calculations are 
+outlined in [this worksheet](./ecdsa-sig-length-probability.worksheet.sc), but the
+answer is:
+
+> Finding a 61 byte (or smaller) ecdsa signature is equivalent to performing approximately
+  79.9 bits of work.
+> Finding a 62 byte signature (or smaller) is equivalent to 72.12 bits of work.
+
+The difference between these two signature lengths is approximately 8 bits, which is
+not terribly suprising, since there are 8 bits in a byte, and we know that the liklihood
+of signatures by length trails off exponentially as signatures get smaller. Nevertheless,
+this means that finding a 61 byte signature is much much much much harder than finding
+a 62 byte signature. This is what makes "calibrating" work locks hard and why, in order
+to be able to calibrate them at all, we end up introducing multiple signatures along with
+a mechanism to aggregate the results of the expected work, translated (in the case of
+a work-a-lot-tery), into a locktime constraint.
+
+In brief, "work," when calculated in the manner outlined here is not additive in
+the usual sense. Rather, work "accumulates" only in the cases where we can show
+that the output of one work calculation is used as the input to another work calculation.
+Sound familiar? This essentially defines a proof-of-work blockchain. For the blockchain,
+we can calculate the work for each block, and add them together to get a total amount
+of accumulated work. It may seem confusing, but we will write this as exponentiation.
+Two "works" `w1` and `w2` where the output of `w1` is included as input of `w2` can be
+written as `w2^w1 = w2 + w1`. The right hand side is the usual addition of real numbers.
+
+However, in situations where we cannot know that the work is performed sequentially,
+then we have to assume the work can be done in parallel. In such a circumstance, two
+"works" `w1` and `w2` are "combined" as follows: `w1*w2 = log2(2^w1 + 2^w2)`. The right
+hand side is the usual notion of logarithm, exponention, addition, etc.
+
+This paragraph serves as a reminder to the author and an aknowledgement to anybody 
+who reads this far that the above will/should be significantly cleaned up and clarified!
+But we digress, and need to get back to coding...
+
+
+
 ## Status
 Pre-proof-of-concept (aka probably broken). Just some worksheets so far doing 
 some preliminary number crunching and transaction constructing.
