@@ -70,7 +70,7 @@ can get an idea of how it works by inspecting the [spending transaction](https:/
 ### Calibrating a Work-Lock
 Work-locks as described here are somewhat convoluted in practice, considering the
 reasonably simple thing they are trying to achieve. This is mostly due to some limits
-in the expressiveness of bitcoin script. Tis is not intended to be construed
+in the expressiveness of bitcoin script. This is not intended to be construed
 as a complaint about bitcoin per se, as there are many good reasons why bitcoin 
 script is less expressive than other languages. Rather, working within bitcoin 
 script is simply a design constraint which we try to workaround here when developing
@@ -114,7 +114,8 @@ number of trials," which is not quite the same as "expected number of trials," b
 we will not dwell on that here. 
 
 More importantly, by using the entropy as our proxy for calculating "work," we can
-define a function `w(p) = (-(1-p)*log2(1-p) - p*log2(p)) / p` to calculate the
+define a function `w(p) = (-(1-p)*log2(1-p) - p*log2(p)) / p` (which is just the
+Shannon entropy of the geometric distribution with parameter `p`) to calculate the
 the "effective amount of work" (in bits) it takes, to flip a bias coin with 
 probability `P(HEADS) = p` and `P(TAILS) = 1 - p`, until a heads is achieved.
 
