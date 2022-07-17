@@ -212,12 +212,17 @@ val work_required_by_maxsiglength: Map[Int,Real] =
         (Real(1)/p)*(-q*log(q,2) - p*log(p,2))
     }.toMap
 
-work_required_by_maxsiglength.toList.sortBy(_._1).toString
+work_required_by_maxsiglength.toList.sortBy(_._1).reverse.toString
 
 // We can also calculate the work per trial directly.
 val work_required_per_trial_by_maxsiglength: Map[Int,Real] = 
     work_required_by_maxsiglength.map { case (x,w) => (x,w/expected_num_trials_by_maxsiglength(x))}
 work_required_per_trial_by_maxsiglength.toList.sortBy(_._1).toString
+
+
+// =============== YOU CAN IGNORE ANY NOTES BELOW.
+// =============== they are just some musings of the author and probably are quite
+// =============== outdated by the time anybody is reading this worksheet. 
 
 // Our next task is to turn this mapping of required work vs. signature length
 // into a mapping of UTXO locktime vs. work required. Of course, a UTXO has
