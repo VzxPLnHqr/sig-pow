@@ -165,7 +165,7 @@ The notation above is inspired by the mathematical notion of a semiring. In esse
 rules of the (base 2) [Log Semiring](https://en.wikipedia.org/wiki/Log_semiring). Whether
 this is a useful or even appropriate analogy remains to be seen, but is convenient
 for our purposes at hand so far. There is also some prior efforts in the literature to
-link these two notions[^1].
+link these two notions[^4].
 
 This paragraph serves as a reminder to the author and an aknowledgement to anybody 
 who reads this far that the above will/should be significantly cleaned up and clarified!
