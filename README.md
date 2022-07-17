@@ -70,7 +70,7 @@ can get an idea of how it works by inspecting the [spending transaction](https:/
 ### Calibrating a Work-Lock
 Work-locks as described here are somewhat convoluted in practice, considering the
 reasonably simple thing they are trying to achieve. This is mostly due to some limits
-in the expressiveness of bitcoin script. This is not intended to be construed
+in the expressiveness of bitcoin script. Tis is not intended to be construed
 as a complaint about bitcoin per se, as there are many good reasons why bitcoin 
 script is less expressive than other languages. Rather, working within bitcoin 
 script is simply a design constraint which we try to workaround here when developing
@@ -160,6 +160,13 @@ then we have to assume the work can be done in parallel. In such a circumstance,
 "works" `w1` and `w2` are "combined" as follows: `w1*w2 = log2(2^w1 + 2^w2)`. The right
 hand side is the usual notion of logarithm, exponention, addition, etc.
 
+The notation above is inspired by the mathematical notion of a semiring. In essence,
+"work" in the thermodynamic limit as contemplated here is combined according to the
+rules of the (base 2) [Log Semiring](https://en.wikipedia.org/wiki/Log_semiring). Whether
+this is a useful or even appropriate analogy remains to be seen, but is convenient
+for our purposes at hand so far. There is also some prior efforts in the literature to
+link these two notions[^1].
+
 This paragraph serves as a reminder to the author and an aknowledgement to anybody 
 who reads this far that the above will/should be significantly cleaned up and clarified!
 But we digress, and need to get back to coding...
@@ -227,3 +234,7 @@ This is easy to do if you use the Nix package manager.
 1. Robin Linus for showing that it is possible to express and verify proof of work within bitcoin script today.
 2. Ruben Somsen for bitcoin wizardry and maintaining a helpful Telegram group of other fellow wizards.
 3. Brill Saton for mental gymnastics and code golfing with bitcoin script.
+
+### Footnotes
+[^4]: [Marcolli M. & Throngren R., Thermodynamic Semirings](https://arxiv.org/abs/1108.2874) - Not exactly the same as we
+   contemplate here, but interesting nonetheless.
