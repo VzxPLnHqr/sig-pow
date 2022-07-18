@@ -18,11 +18,9 @@ than the current bitcoin network is directed towards solving it (or until the ec
 signature algorithm itself is broken). An outline of why this is so is covered later
 in this document.
 
-[This blog post](https://blog.eternitywall.com/content/20171212_Exact_Probabilities/) gives
-the probability distribution for bitcoin (elliptic curve secp256k1) ecdsa signatures
-of a particular length, in bytes. Finding signatures smaller than 70 bytes becomes
-exponentially more difficult. We can exploit this fact as a means to encode proof of work
-in a manner which is verifiable by the bitcoin network. 
+Finding ecdsa signatures smaller than 70 bytes becomes exponentially 
+more difficult.[^prob_dist_ref] We can exploit this fact as a means to encode proof 
+of work in a manner which is verifiable by the bitcoin network.[^schnorr_note] 
 
 **This concept, while perhaps tedious and convoluted to express in current bitcoin script, can be used on mainnet today**. 
 No protocol upgrades needed! Unfortunately it is not usable with tapscript/schnorr,
@@ -174,7 +172,7 @@ The notation above is inspired by the mathematical notion of a semiring. In esse
 rules of the (base 2) [Log Semiring](https://en.wikipedia.org/wiki/Log_semiring). Whether
 this is a useful or even appropriate analogy remains to be seen, but is convenient
 for our purposes at hand so far. There is also some prior efforts in the literature to
-link these two notions[^4].
+link these two notions[^semiring_ref].
 
 This paragraph serves as a reminder to the author and an aknowledgement to anybody 
 who reads this far that the above will/should be significantly cleaned up and clarified!
@@ -245,6 +243,15 @@ This is easy to do if you use the Nix package manager.
 3. Brill Saton for mental gymnastics and code golfing with bitcoin script.
 
 ### Footnotes
-[^4]: [Marcolli M. & Throngren R., Thermodynamic Semirings](https://arxiv.org/abs/1108.2874) - Not exactly the same as we
+[^semiring_ref]: [Marcolli M. & Throngren R., Thermodynamic Semirings](https://arxiv.org/abs/1108.2874) - Not exactly the same as we
    contemplate here, but interesting nonetheless.
+
 [^recent_block]: Bitcoin block with hash (in hex) 000000000000000000080e3308aab615e86e4241e7d4ed4364500edd38aa90ac, when expressed in binary has 76 leading zeros.
+
+[^prob_dist_ref]: [This blog post](https://blog.eternitywall.com/content/20171212_Exact_Probabilities/) gives
+a calculation of the probability distribution for bitcoin (elliptic curve secp256k1) ecdsa signatures
+of a particular length, in bytes. [This worksheet](./ecdsa-sig-length-probability.worksheet.sc) contains a copy of the python code and some calculations. Note: we have not confirmed whether the distribution presented is correct, but simply assume it is for now. This assumption
+should be verified by any interested.
+
+[^schnorr_note]: This applies only to pre-taproot/pre-schnorr bitcoin, such as segwit_v0. Schnorr signatures in bitcoin are guaranteed
+                 to all be the same length.
