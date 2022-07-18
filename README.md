@@ -9,6 +9,13 @@ Robin Linus [here](https://gist.github.com/RobinLinus/95de641ed1e3d9fde83bdcf5ac
 Basically, ECDSA signatures in bitcoin, are typically 70-73 bytes in length. However,
 it is possible to generate shorter signatures -- it just might take a lot of work!
 
+A UTXO locked with a script of the following form, which requires a signature of length
+61 bytes or less: 
+> `<pubkey1> <sig1> OP_SIZE 61 OP_LESSTHANOREQUAL OP_DROP OP_SWAP OP_CHECKSIGVERIFY`
+will remain unspendable until an amount of hashpower a few orders of magnitude larger
+than the current bitcoin network is directed towards solving it (or until the ecdsa
+signature algorithm itself is broken). 
+
 [This blog post](https://blog.eternitywall.com/content/20171212_Exact_Probabilities/) gives
 the probability distribution for bitcoin (elliptic curve secp256k1) ecdsa signatures
 of a particular length, in bytes. Finding signatures smaller than 70 bytes becomes
@@ -127,7 +134,7 @@ conveniently, a `p` which corresponds to a `w(p) = 76 bits`. Math is neat!
 One advantage of viewing and calculating "work" in the way outlined above is that
 we can lift the concept into other distributions and yet still make (somewhat) reasonable
 comparisons across them. For example, while we know the work required to mine a
-recent bitcoin block is 76 bits of work. We can then ask, how short does an ecdsa
+recent bitcoin block[^recent_block] is 76 bits of work. We can then ask, how short does an ecdsa
 signature need to be for us to have confidence that it took *at least 76 bits of work*
 to find such a signature? The details, with some other irrelevent calculations are 
 outlined in [this worksheet](./ecdsa-sig-length-probability.worksheet.sc), but the
@@ -238,3 +245,4 @@ This is easy to do if you use the Nix package manager.
 ### Footnotes
 [^4]: [Marcolli M. & Throngren R., Thermodynamic Semirings](https://arxiv.org/abs/1108.2874) - Not exactly the same as we
    contemplate here, but interesting nonetheless.
+[^recent_block]: Bitcoin block with hash (in hex) 000000000000000000080e3308aab615e86e4241e7d4ed4364500edd38aa90ac, when expressed in binary has 76 leading zeros.
