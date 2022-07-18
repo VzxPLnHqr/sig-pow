@@ -102,8 +102,9 @@ object Main extends IOApp.Simple {
         max_blockheight <- prompt("What is the maximum nLocktime you will allow? (default: 5000000)", 5000000)(_.toInt)
         block_range = max_blockheight - cur_blockheight
         _ <- IO.println(s"this gives a range of $block_range possible nLocktimes")
-        num_sigs <- IO(log(block_range.toDouble,2).ceil.toInt)
-        _ <- IO.println(s"we will need $num_sigs signatures to encode a number in this range")
+        num_possible_sigs <- IO(log(block_range.toDouble,2).ceil.toInt)
+        _ <- IO.println(s"we will need $num_possible_sigs signatures to encode a number in this range")
+        num_sigs <- prompt(s"How many signatures should we use? (default: $num_possible_sigs)",num_possible_sigs)(_.toInt)
         priv_keys <- SigPow.generateKeysfromHashedSeed[IO](num_sigs,h_seed)
         _ <- IO.println("""| Now we need to calibrate your work-lock. A signature
                            | for each private key will be required to spend the
