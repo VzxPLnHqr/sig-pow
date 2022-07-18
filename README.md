@@ -11,7 +11,7 @@ it is possible to generate shorter signatures -- it just might take a lot of wor
 
 A UTXO locked with a script of the following form needs a signature of length 61 bytes or less
 to be spent.
-> `<pubkey1> <sig1> OP_SIZE 61 OP_LESSTHANOREQUAL OP_DROP OP_SWAP OP_CHECKSIGVERIFY`
+> `<pubkey1> <sig1> OP_SIZE 61 OP_LESSTHANOREQUAL OP_VERIFY OP_SWAP OP_CHECKSIGVERIFY`
 
 Such a UTXO will remain unspendable until an amount of hashpower a few orders of magnitude larger
 than the current bitcoin network is directed towards solving it (or until the ecdsa
