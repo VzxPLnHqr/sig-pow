@@ -151,13 +151,13 @@ the usual sense. Rather, work "accumulates" only in the cases where we can show
 that the output of one work calculation is used as the input to another work calculation.
 Sound familiar? This essentially defines a proof-of-work blockchain. For the blockchain,
 we can calculate the work for each block, and add them together to get a total amount
-of accumulated work. It may seem confusing, but we will write this as exponentiation.
-Two "works" `w1` and `w2` where the output of `w1` is included as input of `w2` can be
-written as `w2^w1 = w2 + w1`. The right hand side is the usual addition of real numbers.
+of accumulated work. We will write this operation `w1 |*| w2`, for two "works" `w1` 
+and `w2` where the output of `w1` is included as input of `w2`. The right hand side 
+is the usual addition of real numbers.
 
 However, in situations where we cannot know that the work is performed sequentially,
 then we have to assume the work can be done in parallel. In such a circumstance, two
-"works" `w1` and `w2` are "combined" as follows: `w1*w2 = log2(2^w1 + 2^w2)`. The right
+"works" `w1` and `w2` are "combined" as `w1 |+| w2 = log2(2^w1 + 2^w2)`. The right
 hand side is the usual notion of logarithm, exponention, addition, etc.
 
 The notation above is inspired by the mathematical notion of a semiring. In essence,
