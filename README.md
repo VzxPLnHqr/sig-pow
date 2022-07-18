@@ -9,12 +9,14 @@ Robin Linus [here](https://gist.github.com/RobinLinus/95de641ed1e3d9fde83bdcf5ac
 Basically, ECDSA signatures in bitcoin, are typically 70-73 bytes in length. However,
 it is possible to generate shorter signatures -- it just might take a lot of work!
 
-A UTXO locked with a script of the following form, which requires a signature of length
-61 bytes or less: 
+A UTXO locked with a script of the following form needs a signature of length 61 bytes or less
+to be spent.
 > `<pubkey1> <sig1> OP_SIZE 61 OP_LESSTHANOREQUAL OP_DROP OP_SWAP OP_CHECKSIGVERIFY`
-will remain unspendable until an amount of hashpower a few orders of magnitude larger
+
+Such a UTXO will remain unspendable until an amount of hashpower a few orders of magnitude larger
 than the current bitcoin network is directed towards solving it (or until the ecdsa
-signature algorithm itself is broken). 
+signature algorithm itself is broken). An outline of why this is so is covered later
+in this document.
 
 [This blog post](https://blog.eternitywall.com/content/20171212_Exact_Probabilities/) gives
 the probability distribution for bitcoin (elliptic curve secp256k1) ecdsa signatures
@@ -22,7 +24,7 @@ of a particular length, in bytes. Finding signatures smaller than 70 bytes becom
 exponentially more difficult. We can exploit this fact as a means to encode proof of work
 in a manner which is verifiable by the bitcoin network. 
 
-**This concept, while tedious and convoluted, can be used on mainnet today**. 
+**This concept, while perhaps tedious and convoluted to express in current bitcoin script, can be used on mainnet today**. 
 No protocol upgrades needed! Unfortunately it is not usable with tapscript/schnorr,
 as all valid schnorr signatures in bitcoin are the same length. Nevertheless, what 
 we try to put together here is a demonstration of the concept. 
