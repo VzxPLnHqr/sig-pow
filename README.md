@@ -120,18 +120,22 @@ customers) agree on. Maybe a simple model will be the best model, such as a cons
 price.
 
 ##### Nested Work-a-lot-teries?
-The talk of how Alice might price tickets, and how people might pay for them, actually
+Considering how Alice might price tickets, and how people might pay for them, actually
 presents a curious additional possibility: Alice could generate and pre-sign a 
 spending transaction of her choosing whereby she (presumably) pays some of the
 work-a-lottery prize back to herself, and pays the remainder into an additional
-work-a-lottery with different, presumably easier, parameters. The reason why the
-new parameters would likely be easier is that in order to _actually_ spend the
+work-a-lottery with different, presumably easier, parameters. She publishes the 
+parameters for both lotteries, and prospective miners can choose which to solve. 
+
+The reason why the new parameters would likely be easier is that in order to _actually_ spend the
 new work-a-lottery prize, a prospective spender would still need to provide a
 valid solution (short enough signatures) to the original, in addition to providing
-a valid solution to the new.
+a valid solution to the new. However, in order to claim the new (smaller) lottery
+prize, the prospective miner does _not_ need a signature from Alice.
 
 Repeating this process over and over allows her to generate a somewhat arbitrary 
-sequence of possible work-a-lotteries.
+sequence of possible work-a-lotteries. Prospective miners can then choose where
+and if they want to enter the game.
 
 ### Calibrating a Work-Lock
 Work-locks as described here are somewhat convoluted in practice, considering the
