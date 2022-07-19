@@ -76,10 +76,10 @@ can get an idea of how it works by inspecting the [spending transaction](https:/
 
 #### Work-a-lot-tery Economics - a first pass
 The work-lock used above is completely "trustless" and "decentralized" in the sense
-that, once the work-lock has been funded and the parameters for it, such as the 
-private keys used to mine, the redeem script, etc, there need not be any central
+that, once the work-lock has been funded and the parameters for it chosen, such as the 
+private keys used to mine, the redeem script, etc, then there need not be any central
 coordinating entity involved. The parameters can be posted to a mailing list, put in a
-github issue, or really anywhere that is reasonably publicly accessible.
+github issue, or really placed anywhere that is reasonably publicly accessible.
 
 However, this leaves open the question of whether there is any economic motivation
 for somebody to fund a work-a-lot-tery work-lock. If Alice funds it, she
@@ -117,7 +117,21 @@ wants to buy a group of tickets? Should she give a bulk discount or charge more?
 
 Answering these questions ultimatley is up to Alice and whatever the market (her prospective
 customers) agree on. Maybe a simple model will be the best model, such as a constant ticket
-price?
+price.
+
+##### Nested Work-a-lot-teries?
+The talk of how Alice might price tickets, and how people might pay for them, actually
+presents a curious additional possibility: Alice could generate and pre-sign a 
+spending transaction of her choosing whereby she (presumably) pays some of the
+work-a-lottery prize back to herself, and pays the remainder into an additional
+work-a-lottery with different, presumably easier, parameters. The reason why the
+new parameters would likely be easier is that in order to _actually_ spend the
+new work-a-lottery prize, a prospective spender would still need to provide a
+valid solution (short enough signatures) to the original, in addition to providing
+a valid solution to the new.
+
+Repeating this process over and over allows her to generate a somewhat arbitrary 
+sequence of possible work-a-lotteries.
 
 ### Calibrating a Work-Lock
 Work-locks as described here are somewhat convoluted in practice, considering the
