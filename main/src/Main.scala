@@ -46,6 +46,8 @@ object Main extends IOApp.Simple {
                           |""".stripMargin) >> 
             prompt("Enter full hex for funding transaction:")
               .map(Transaction.read(_)).flatMap(t => spendWorkLockedOutput(t))
+
+          case _ => IO.println("Invalid command. Bye!")
         }
     } yield ()
 
@@ -104,6 +106,7 @@ object Main extends IOApp.Simple {
         _ <- IO.println(s"this gives a range of $block_range possible nLocktimes")
         num_possible_sigs <- IO(log(block_range.toDouble,2).ceil.toInt)
         _ <- IO.println(s"we will need $num_possible_sigs signatures to encode a number in this range")
+        _ <- IO.println("note: with our current encoding mechanism, using more than approximately 14 signatures may create a bitcoin script with too many non-push operatiosn (an invalid script).")
         num_sigs <- prompt(s"How many signatures should we use? (default: $num_possible_sigs)",num_possible_sigs)(_.toInt)
         priv_keys <- SigPow.generateKeysfromHashedSeed[IO](num_sigs,h_seed)
         _ <- IO.println("""| Now we need to calibrate your work-lock. A signature
