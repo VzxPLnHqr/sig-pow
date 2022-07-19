@@ -72,7 +72,52 @@ can get an idea of how it works by inspecting the [spending transaction](https:/
    will be "more difficult" to actually express than others.
 7. Building up such a number inside a bitcoin script and using it as, say, the
    input for an `OP_CHECKLOCKTIMEVERIFY` calculation, is interesting.
-8. Calibrated appropriately, more work will unlock the output sooner. 
+8. Calibrated appropriately, more work will unlock the output sooner.
+
+#### Work-a-lot-tery Economics - a first pass
+The work-lock used above is completely "trustless" and "decentralized" in the sense
+that, once the work-lock has been funded and the parameters for it, such as the 
+private keys used to mine, the redeem script, etc, there need not be any central
+coordinating entity involved. The parameters can be posted to a mailing list, put in a
+github issue, or really anywhere that is reasonably publicly accessible.
+
+However, this leaves open the question of whether there is any economic motivation
+for somebody to fund a work-a-lot-tery work-lock. If Alice funds it, she
+too is bound to perform the necessary work if she ever wants to have access to those
+coins again. If she is funding the work-lock for some benevolent reason, she may
+be ok accepting that she is essentially donating her coins to serve as the prize for
+the work-a-lot-tery. 
+
+Is there a way we can give Alice at least a chance of earning a
+return on her work-locked sats? Here is one possible way:
+
+Alice can augment the work-a-lot-tery work-lock to require an additional signature
+(hers). Only spending transactions (tickets) with her signature will be valid. One
+may object that this gives Alice the ability to "censor" who is allowed to participate
+in the work-a-lot-tery. Technically, this is true, but practically speaking it is likely
+a non-issue. Here is why:
+
+1. Any rational would-be participant (e.g. a prospective miner named Bob), will request that
+   Alice sign his spending transaction _before_ he performs any real work trying to
+   find the necessary short signatures.
+2. Alice wants to collect revenue by selling tickets. She can collect payment for
+   the tickets in any manner she likes such as via the lightning network.
+3. If Alice refuses to sign a spending transaction, she is no longer maximizing
+   her revenue.
+4. For Alice to justify such censoring on economic grounds it means that she thinks
+   Bob's prospective spending transaction will be the one which "wins" the lottery.
+5. But she cannot know this in advance (due to the provably-fair nature of the work-lock),
+   so she is better off trying to sell as many tickets as possible.
+
+Now, determining how much to charge for the tickets is an entirely different question. Participants
+may not appreciate paying different amounts for their tickets. Yet, what if Alice
+somehow knows that Bob has access to more computational power than any other participants
+so far, should she try to charge Bob more for his ticket? Similarly, what if Charlie
+wants to buy a group of tickets? Should she give a bulk discount or charge more?
+
+Answering these questions ultimatley is up to Alice and whatever the market (her prospective
+customers) agree on. Maybe a simple model will be the best model, such as a constant ticket
+price?
 
 ### Calibrating a Work-Lock
 Work-locks as described here are somewhat convoluted in practice, considering the
