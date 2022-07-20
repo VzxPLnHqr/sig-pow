@@ -125,15 +125,13 @@ price.
 Considering how Alice might price tickets, and how people might pay for them, actually
 presents a curious additional possibility: Alice could generate and pre-sign a 
 spending transaction of her choosing whereby she (presumably) pays some of the
-work-a-lottery prize back to herself, and pays the remainder into an additional
-work-a-lottery with different, presumably easier, parameters. She publishes the 
-parameters for both lotteries, and prospective miners can choose which to solve. 
+work-a-lottery prize back to herself, and pays the remainder into a new
+work-a-lottery output. 
 
-The reason why the new parameters would likely be easier is that in order to _actually_ spend the
-new work-a-lottery prize, a prospective spender would still need to provide a
-valid solution (short enough signatures) to the original, in addition to providing
-a valid solution to the new. Thus, in actuality, the new lottery requires more
-work to unlock. However, in order to claim the new (smaller) lottery
+In order to _actually_ spend the new work-a-lottery prize, a prospective spender would 
+still need to provide a valid solution (short enough signatures) to the original, 
+in addition to providing a valid solution to the new. Thus, in actuality, the new 
+lottery requires more work to unlock. However, in order to claim the new (smaller) lottery
 prize, the prospective miner does _not_ need a signature from Alice, thereby eliminating
 any risk of Alice censoring.
 
@@ -147,7 +145,7 @@ reasonably simple thing they are trying to achieve. This is mostly due to some l
 in the expressiveness of bitcoin script. This is not intended to be construed
 as a complaint about bitcoin per se, as there are many good reasons why bitcoin 
 script is less expressive than other languages. Rather, working within bitcoin 
-script is simply a design constraint which we try to workaround here when developing
+script is simply a design constraint which we must satisfy when developing
 and calibrating a work-lock. 
 
 #### Quantifying the Work
@@ -220,33 +218,6 @@ to be able to calibrate them at all, we end up introducing multiple signatures a
 a mechanism to aggregate the results of the expected work, translated (in the case of
 a work-a-lot-tery), into a locktime constraint.
 
-In brief, "work," when calculated in the manner outlined here is not additive in
-the usual sense. Rather, work "accumulates" only in the cases where we can show
-that the output of one work calculation is used as the input to another work calculation.
-Sound familiar? This essentially defines a proof-of-work blockchain. For the blockchain,
-we can calculate the work for each block, and add them together to get a total amount
-of accumulated work. We will write this operation `w1 |*| w2`, for two "works" `w1` 
-and `w2` where the output of `w1` is included as input of `w2`. The right hand side 
-is the usual addition of real numbers.
-
-However, in situations where we cannot know that the work is performed sequentially,
-then we have to assume the work can be done in parallel. In such a circumstance, two
-"works" `w1` and `w2` are "combined" as `w1 |+| w2 = log2(2^w1 + 2^w2)`. The right
-hand side is the usual notion of logarithm, exponention, addition, etc.
-
-The notation above is inspired by the mathematical notion of a semiring. In essence,
-"work" in the thermodynamic limit as contemplated here is combined according to the
-rules of the (base 2) [Log Semiring](https://en.wikipedia.org/wiki/Log_semiring). Whether
-this is a useful or even appropriate analogy remains to be seen, but is convenient
-for our purposes at hand so far. There is also some prior efforts in the literature to
-link these two notions[^semiring_ref].
-
-This paragraph serves as a reminder to the author and an aknowledgement to anybody 
-who reads this far that the above will/should be significantly cleaned up and clarified!
-But we digress, and need to get back to coding...
-
-
-
 ## Status
 Pre-proof-of-concept (aka probably broken). Just some worksheets so far doing 
 some preliminary number crunching and transaction constructing.
@@ -310,9 +281,6 @@ This is easy to do if you use the Nix package manager.
 3. Brill Saton for mental gymnastics and code golfing with bitcoin script.
 
 ### Footnotes
-[^semiring_ref]: [Marcolli M. & Throngren R., Thermodynamic Semirings](https://arxiv.org/abs/1108.2874) - Not exactly the same as we
-   contemplate here, but interesting nonetheless.
-
 [^recent_block]: Bitcoin block with hash (in hex) 000000000000000000080e3308aab615e86e4241e7d4ed4364500edd38aa90ac, when expressed in binary has 76 leading zeros.
 
 [^prob_dist_ref]: [This blog post](https://blog.eternitywall.com/content/20171212_Exact_Probabilities/) gives
