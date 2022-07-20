@@ -139,6 +139,20 @@ Repeating this process over and over allows her to generate a somewhat arbitrary
 sequence of possible work-a-lotteries. Prospective miners can then choose where
 and if they want to enter the game depending on their risk tolerances and preferences.
 
+#### Degenerate, Recursive Work-locks?
+As if the above was not complicated enough, we may be able to consider something
+even more strange. Suppose Alice creates a work-lock which requires two signatures
+to spend: (1) a signature by the "work key" which must be of a specified maximum length,
+and (2) a signature by Alice herself. 
+
+Alice uses her key to sign a spending transaction which sends the funds back to the
+the same work-locked address from which they came. The private key for the "work key,"
+is shared as public knowledge. The spending transaction is not broadcastable until
+the work requirement is met, but this can be done by anybody with the work key. In
+essence, with work alone, a complete stranger can cause Alice's utxo to spend its
+contents, yet those contents will end up right back where they started (work-locked
+by Alice).
+
 ### Calibrating a Work-Lock
 Work-locks as described here are somewhat convoluted in practice, considering the
 reasonably simple thing they are trying to achieve. This is mostly due to some limits
