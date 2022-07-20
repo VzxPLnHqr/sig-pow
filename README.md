@@ -105,9 +105,11 @@ a non-issue. Here is why:
 3. If Alice refuses to sign a spending transaction, she is no longer maximizing
    her revenue.
 4. For Alice to justify such censoring on economic grounds it means that she thinks
-   Bob's prospective spending transaction will be the one which "wins" the lottery.
+   Bob's prospective spending transaction will be the one which "wins" the lottery,
+   thereby preventing Alice from selling more tickets in the meantime.
 5. But she cannot know this in advance (due to the provably-fair nature of the work-lock),
-   so she is better off trying to sell as many tickets as possible.
+   so she is better off trying to sell as many tickets as possible, including selling
+   a ticket to Bob.
 
 Now, determining how much to charge for the tickets is an entirely different question. Participants
 may not appreciate paying different amounts for their tickets. Yet, what if Alice
@@ -130,12 +132,14 @@ parameters for both lotteries, and prospective miners can choose which to solve.
 The reason why the new parameters would likely be easier is that in order to _actually_ spend the
 new work-a-lottery prize, a prospective spender would still need to provide a
 valid solution (short enough signatures) to the original, in addition to providing
-a valid solution to the new. However, in order to claim the new (smaller) lottery
-prize, the prospective miner does _not_ need a signature from Alice.
+a valid solution to the new. Thus, in actuality, the new lottery requires more
+work to unlock. However, in order to claim the new (smaller) lottery
+prize, the prospective miner does _not_ need a signature from Alice, thereby eliminating
+any risk of Alice censoring.
 
 Repeating this process over and over allows her to generate a somewhat arbitrary 
 sequence of possible work-a-lotteries. Prospective miners can then choose where
-and if they want to enter the game.
+and if they want to enter the game depending on their risk tolerances and preferences.
 
 ### Calibrating a Work-Lock
 Work-locks as described here are somewhat convoluted in practice, considering the
