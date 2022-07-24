@@ -32,7 +32,9 @@ creating/verifying work-locks in a more streamlined way. Afterall, proof-of-work
 is an effective filtering mechanism. Work-locks, even in this inefficient signature-length
 encoding, are easy for bitcoin nodes to verify relative to the work that went into unlocking them.
 
-### A work-a-lot-tery!
+### Example: A work-a-lot-tery!
+(note: this is the example use-case that the code in this repository actually attempts to do -- it is still very much under construction).
+
 Working to unlock a work-locked output is somewhat like traditional bitcoin mining,
 but possibly better! With a properly calibrated work-lock, even a little bit of 
 mining will produce a valid spending transaction (a ticket in this lottery).
