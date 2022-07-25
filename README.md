@@ -1,6 +1,14 @@
 # sig-pow - work-locked outputs
 proof of work via ecdsa signature length
 
+#### Why? We need reckless, but safe experimentation with bitcoin
+Work-locks might allow for "reckless, but safe" experimentation on mainchian bitcoin. 
+It would be reckless because it is real money at stake, but safe because it does not 
+place any real additional burden on bitcoin nodes. If some valuable semantics are 
+utilized/discovered within a protocol which is being used by participants to unlock
+a "work-locked" output, then such semantics might be considered a candidate for 
+inclusion into bitcoin itself.
+
 ## What?
 An interesting way to encode and verify proof of work directly within bitcoin script 
 (with no new opcodes needed) is via signature length. The idea is originally from 
