@@ -36,8 +36,10 @@ encoding, are easy for bitcoin nodes to verify relative to the work that went in
 (note: this is the example use-case that the code in this repository actually attempts to do -- it is still very much under construction).
 
 Working to unlock a work-locked output is somewhat like traditional bitcoin mining,
-but possibly better! With a properly calibrated work-lock, even a little bit of 
-mining will produce a valid spending transaction (a ticket in this lottery).
+but possibly better! One way to structure a work-lock is to create a lottery-like
+mechanism.[^without_timelock] We call this a work-a-lot-tery. With a properly calibrated 
+work-a-lot-tery,even a little bit of mining will produce a valid spending transaction 
+(a ticket in this lottery).
 
 The ticket is a valid transaction in every way except that the nLocktime might 
 prevent it from being broadcast and included in a block for, say, another 200 years!
@@ -234,9 +236,25 @@ to be able to calibrate them at all, we end up introducing multiple signatures a
 a mechanism to aggregate the results of the expected work, translated (in the case of
 a work-a-lot-tery), into a locktime constraint.
 
+##### A note on precision of work targets
+One benefit of the work-a-lot-tery approach is that the mapping to nLocktime puts 
+the tickets (spending transactions) into a more human-meaningful language ("how 
+long does one need to wait?"), but a downside of this approach is that the precision 
+of the work-lock is then dictated by the precision of the locktime encoding. Regardless
+of whether a bitcoin transaction locktime is specified in block, or unix timestamps,
+the precision of either is far too course compared with the precision of, for example,
+the standard bitcoin difficulty adjustment algorithm.
+
+In the standard bitcoin difficulty adjustment algorithm, the target, known as `nBits`
+in the block header is a representation of 256-bit number whereby the lease significant
+bits are mostly ignored. With work-locks we can, of course, try to emulate a similar
+mechanism. Doing so is left as an exercise for the curious and determined reader.[^precision_note]
+
 ## Status
 Pre-proof-of-concept (aka probably broken). Just some worksheets so far doing 
-some preliminary number crunching and transaction constructing.
+some preliminary number crunching and transaction constructing. There is a mostly
+non-viable application in this repository which starts to explore creation and
+calibration of work-a-lot-teries.
 
 ### Example Additional Use-cases for Work-locks
 #### (future) Use-case - spam prevention
@@ -306,3 +324,18 @@ should be verified by any interested.
 
 [^schnorr_note]: This applies only to pre-taproot/pre-schnorr bitcoin, such as segwit_v0. Schnorr signatures in bitcoin are guaranteed
                  to all be the same length.
+
+[^without_timelock]: There are other ways to create and use work-locks. Work-a-lot-tery work-locks
+                 create a mapping of (roughly) `amt_work -> nLocktime`, but this is not
+                 strictly necessary. Instead, and by default, a work-lock is simply unlocked
+                 by work alone.
+
+[^precision_note]: Suppose a work-locked UTXO rquires `N` signatures to unlock, where each
+                 signature meets some specified threshhold. One challenge is that the signatures
+                 can be computed essentially in parallel (e.g. independently from the other
+                 required signatures). It would be easier to achieve a desired precision if
+                 somehow the signatures could be "nested" such that `sig1` depends on `sig2`
+                 which depends on `sig3`, ...., which depends on `sigN`. However, it is an
+                 open problem as to whether such an encoding is possible within the (current)
+                 limitations of bitcoin script. 
+                 
