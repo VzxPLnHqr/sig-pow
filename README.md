@@ -225,7 +225,7 @@ conveniently, a `p` which corresponds to a `w(p) = 76 bits`. Math is neat!
 One advantage of viewing and calculating "work" in the way outlined above is that
 we can lift the concept into other distributions and yet still make (somewhat) reasonable
 comparisons across them. For example, while we know the work required to mine a
-recent bitcoin block[^recent_block] is 76 bits of work. We can then ask, how short does an ecdsa
+recent bitcoin block[^recent_block] is 76 bits of work, we can then ask, how short does an ecdsa
 signature need to be for us to have confidence that it took *at least 76 bits of work*
 to find such a signature? The details, with some other irrelevent calculations are 
 outlined in [this worksheet](./ecdsa-sig-length-probability.worksheet.sc), but the
@@ -250,7 +250,7 @@ the tickets (spending transactions) into a more human-meaningful language ("how
 long does one need to wait?"), but a downside of this approach is that the precision 
 of the work-lock is then dictated by the precision of the locktime encoding. Regardless
 of whether a bitcoin transaction locktime is specified in block, or unix timestamps,
-the precision of either is far too course compared with the precision of, for example,
+the precision of either is far too coarse compared with the precision of, for example,
 the standard bitcoin difficulty adjustment algorithm.
 
 In the standard bitcoin difficulty adjustment algorithm, the target, known as `nBits`
