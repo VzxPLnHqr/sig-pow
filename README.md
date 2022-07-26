@@ -254,9 +254,11 @@ the precision of either is far too course compared with the precision of, for ex
 the standard bitcoin difficulty adjustment algorithm.
 
 In the standard bitcoin difficulty adjustment algorithm, the target, known as `nBits`
-in the block header is a representation of 256-bit number whereby the lease significant
+in the block header is a representation of 256-bit number whereby the least significant
 bits are mostly ignored. With work-locks we can, of course, try to emulate a similar
-mechanism. Doing so is left as an exercise for the curious and determined reader.[^precision_note]
+mechanism by utilizing 29 signatures.[^precision_note1], split across multiple
+transactions.[^precision_note2] Doing so is left, for now, as an exercise for the curious 
+and determined.
 
 ## Status
 Pre-proof-of-concept (aka probably broken). Just some worksheets so far doing 
@@ -338,12 +340,24 @@ should be verified by any interested.
                  strictly necessary. Instead, and by default, a work-lock is simply unlocked
                  by work alone.
 
-[^precision_note]: Suppose a work-locked UTXO rquires `N` signatures to unlock, where each
+[^precision_note1]: In a bitcoin blockheader, the field known as "bits" or "nBits" is represented
+                 by 4 bytes. The first byte represents the length of the target (in bytes), and the
+                 last 3 bytes represent the first three bytes of the target itself. Bitcoin uses
+                 a hash function which produces a 32-byte output, so, for purposes in bitcoin the
+                 "target" cannot exceed 32 bytes without a hard fork. This gives `32*256*256*256` or
+                 `2^29` possible values that the "target" can take. Encoding such values in base2 would
+                 require `log2(2^29) = 29` signatures.
+
+[^precision_note2]: Suppose a work-locked UTXO rquires `N` signatures to unlock, where each
                  signature meets some specified threshhold. One challenge is that the signatures
                  can be computed essentially in parallel (e.g. independently from the other
-                 required signatures). It would be easier to achieve a desired precision if
+                 required signatures). It might be preferable if
                  somehow the signatures could be "nested" such that `sig1` depends on `sig2`
                  which depends on `sig3`, ...., which depends on `sigN`. However, it is an
                  open problem as to whether such an encoding is possible within the (current)
-                 limitations of bitcoin script. 
+                 limitations of bitcoin script. Additionally, it is important to try to keep
+                 the number of required signatures to a minimum since the bitcoin script itself
+                 can become quite long and may exceed the consensus-enforced maximum number of
+                 non-push opcode limit (currently around 200). A possible remedy for this may 
+                 be to split across multiple transactions.
                  
