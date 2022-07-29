@@ -346,7 +346,7 @@ should be verified by any interested.
                  a hash function which produces a 32-byte output, so, for purposes in bitcoin the
                  "target" cannot exceed 32 bytes without a hard fork. This gives `32*256*256*256` or
                  `2^29` possible values that the "target" can take. Encoding such values in base2 would
-                 require `log2(2^29) = 29` signatures.
+                 require `log2(2^29) = 29` signatures. Source: https://learnmeabitcoin.com/technical/bits
 
 [^precision_note2]: Suppose a work-locked UTXO rquires `N` signatures to unlock, where each
                  signature meets some specified threshhold. One challenge is that the signatures
