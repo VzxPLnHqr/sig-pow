@@ -3,8 +3,8 @@ package vzxplnhqr.sigpow
 import cats._
 import cats.syntax.all._
 
-import fr.acinq.bitcoin._
-import fr.acinq.bitcoin.Crypto._
+import scoin._
+import Crypto._
 
 import scodec.bits._
 
