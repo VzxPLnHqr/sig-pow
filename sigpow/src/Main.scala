@@ -1,7 +1,6 @@
 package vzxplnhqr.sigpow
 
-import fr.acinq.bitcoin._
-import fr.acinq.bitcoin.Crypto._
+import scoin._
 import scodec.bits._
 import spire.math._
 import spire.implicits._

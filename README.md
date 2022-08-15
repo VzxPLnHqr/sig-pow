@@ -305,11 +305,15 @@ Then, the sidechain essentially evaporates.
    chain work in tandem to (in expectation) produce this outcome.
 
 ## Building / Usage (application)
-The application currently being built in this repository is very simple:
-1. use the [Nix](https://nixos.org) package manager to install dependencies by first installing Nix and then running `nix-shell -p scala` which will ensure that you have a decent version of scala/java installed
+The application currently being built is also a demonstration of how Scala can be compiled to JVM code as well as
+native code using [Scala Native]https://scala-native.org. 
+1. use the [Nix](https://nixos.org) package manager to install dependencies by first installing Nix and then running `nix-shell scala-native.nix`. This will use nix to ensure that the necessary dependencies are available in your environment.
 2. for the build, we use the `mill` build tool [Mill Website](https://com-lihaoyi.github.io/mill), which also requires java
 3. a bootstrap script for mill has been checked into the repository already
-4. `./mill -i main.run` runs the `main` module of the `bulid.sc` project (the `-i` allows for `readLine` and `ctrl+C` to work properly)
+### JVM
+4. `./mill -i sigpow.jvm[3.1.3].run` runs the `jvm` module defined in `bulid.sc`(the `-i` allows for `readLine` and `ctrl+C` to work properly, and the `3.1.3` is the desired Scala version to use).
+### Scala Native
+4. `./mill show sigpow.native[3.1.3,0.4.5].nativeLink` will compile the application to native code which can then be run directly.
 
 ## Building / Usage (worksheets)
 There are some exploratory worksheets written in scala as an [
