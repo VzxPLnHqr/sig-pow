@@ -77,11 +77,13 @@ object sigpow extends Module {
     def offset = os.up
     def ivyDeps = Agg(
       ivy"org.typelevel::cats-effect::3.3.12",
-      ivy"com.fiatjaf::scoin::0.1.0-SNAPSHOT",
-      ivy"org.typelevel::spire::0.18.0"
+      ivy"com.fiatjaf::scoin::0.2-0d78d99-SNAPSHOT"
+      //ivy"org.typelevel::spire::0.18.0"
     )
-    //def moduleKind = T { ModuleKind.CommonJSModule }
+    def moduleKind = T { ModuleKind.CommonJSModule }
     def scalaJSVersion = "1.10.1"
+
+    def mainClass = Some("vzxplnhqr.sigpow.js.Main")
 
     override def jsDeps = T {
       super.jsDeps() ++ JsDeps(
@@ -91,6 +93,7 @@ object sigpow extends Module {
       )
     }
     // include platform specific sources
-    def sources = T.sources(super.sources() ++ Seq(PathRef(build.millSourcePath / "sigpow" / "js" / "src")))
+    //def sources = T.sources(super.sources() ++ Seq(PathRef(build.millSourcePath / "sigpow" / "js" / "src")))
+    def sources = T.sources(Seq(PathRef(build.millSourcePath / "sigpow" / "js" / "src")))
   }
 }
