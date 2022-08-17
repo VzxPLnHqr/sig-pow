@@ -1,10 +1,14 @@
-import mill._, scalalib._, scalanativelib._
+import mill._, scalalib._, scalanativelib._, scalajslib._, scalajslib.api._
+
+import $file.Webpack
+import Webpack.WebpackLib._
 
 import coursier.maven.MavenRepository
 
 // which versions of Scala to target?
 val scalaVersions = List("3.1.3")
 val scalaNativeVersions = scalaVersions.map((_,"0.4.5"))
+val scalaJSVersions = scalaVersions.map((_, "1.10.1"))
 
 // a general module to capture as many "shared" things as possible
 abstract class SigPowMainModule(val crossScalaVersion: String) extends CrossScalaModule {
@@ -66,5 +70,27 @@ object sigpow extends Module {
 
     // include platform specific sources
     def sources = T.sources(super.sources() ++ Seq(PathRef(build.millSourcePath / "sigpow" / "native" / "src")))
+  }
+
+  object js extends Cross[JsSigPowModule](scalaJSVersions: _*)
+  class JsSigPowModule extends SigPowMainModule(crossScalaVersion="3.1.3") with ScalaJSWebpackApplicationModule {
+    def offset = os.up
+    def ivyDeps = Agg(
+      ivy"org.typelevel::cats-effect::3.3.12",
+      ivy"com.fiatjaf::scoin::0.1.0-SNAPSHOT",
+      ivy"org.typelevel::spire::0.18.0"
+    )
+    //def moduleKind = T { ModuleKind.CommonJSModule }
+    def scalaJSVersion = "1.10.1"
+
+    override def jsDeps = T {
+      super.jsDeps() ++ JsDeps(
+        "@noble/secp256k1" -> "1.6.3", // required by scoin
+        "hash.js" -> "1.1.7",          // required by scoin
+        "chacha" -> "2.1.0"            // required by scoin
+      )
+    }
+    // include platform specific sources
+    def sources = T.sources(super.sources() ++ Seq(PathRef(build.millSourcePath / "sigpow" / "js" / "src")))
   }
 }
