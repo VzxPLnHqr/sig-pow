@@ -78,7 +78,8 @@ object sigpow extends Module {
     def ivyDeps = Agg(
       ivy"org.typelevel::cats-effect::3.3.12",
       ivy"com.fiatjaf::scoin::0.2-2817cfc-SNAPSHOT",
-      ivy"org.typelevel::spire::0.18.0"
+      ivy"org.typelevel::spire::0.18.0",
+      ivy"co.fs2::fs2-io::3.2.12"
     )
     def moduleKind = T { ModuleKind.CommonJSModule }
     def scalaJSVersion = "1.10.1"
@@ -107,7 +108,7 @@ object sigpow extends Module {
       val logger = T.ctx().log
       val npmInstall = os.proc("npm", "install").call(params.outputDirectory)
       logger.debug(npmInstall.out.text())
-      os.proc("node", params.copiedInputFile).call(params.outputDirectory)
+      os.proc("node", params.copiedInputFile).call(cwd=params.outputDirectory,stdin=os.Inherit,stdout=os.Inherit,stderr=os.Inherit)
     }
   }
 }
