@@ -137,9 +137,9 @@ object WebpackLib {
   }
 
   trait ScalaJSWebpackBaseModule extends ScalaJSDepsModule {
-    def webpackVersion: Target[String] = "4.17.1"
-    def webpackCliVersion: Target[String] = "3.1.0"
-    def webpackDevServerVersion: Target[String] = "3.1.7"
+    def webpackVersion: Target[String] = "5.74.0" //"4.17.1"
+    def webpackCliVersion: Target[String] = "4.10.0" //"3.1.0"
+    def webpackDevServerVersion: Target[String] = "4.10.0" //"3.1.7"
 
     def writePackageJson = T.task { params: WebpackParams =>
       writePkgJson(params, params.jsDeps, webpackVersion(), webpackCliVersion(), webpackDevServerVersion())

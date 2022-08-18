@@ -73,12 +73,12 @@ object sigpow extends Module {
   }
 
   object js extends Cross[JsSigPowModule](scalaJSVersions: _*)
-  class JsSigPowModule extends SigPowMainModule(crossScalaVersion="3.1.3") with ScalaJSWebpackApplicationModule {
+  class JsSigPowModule extends SigPowMainModule(crossScalaVersion="3.1.3") with ScalaJSWebpackLibraryModule {
     def offset = os.up
     def ivyDeps = Agg(
       ivy"org.typelevel::cats-effect::3.3.12",
-      ivy"com.fiatjaf::scoin::0.2-0d78d99-SNAPSHOT"
-      //ivy"org.typelevel::spire::0.18.0"
+      ivy"com.fiatjaf::scoin::0.2-2817cfc-SNAPSHOT",
+      ivy"org.typelevel::spire::0.18.0"
     )
     def moduleKind = T { ModuleKind.CommonJSModule }
     def scalaJSVersion = "1.10.1"
@@ -93,7 +93,21 @@ object sigpow extends Module {
       )
     }
     // include platform specific sources
-    //def sources = T.sources(super.sources() ++ Seq(PathRef(build.millSourcePath / "sigpow" / "js" / "src")))
-    def sources = T.sources(Seq(PathRef(build.millSourcePath / "sigpow" / "js" / "src")))
+    def sources = T.sources(super.sources() ++ Seq(PathRef(build.millSourcePath / "sigpow" / "js" / "src")))
+    //def sources = T.sources(Seq(PathRef(build.millSourcePath / "sigpow" / "js" / "src")))
+
+    def runNode() = T.command {
+      val params = WebpackParams(fastOpt().path, jsDeps(), T.ctx().dest, opt = false, None)
+      val _bundleFilename = bundleFilename()
+      if (params.inputFile != params.copiedInputFile)
+        os.copy.over(params.inputFile, params.copiedInputFile)
+      params.jsDeps.jsSources foreach { case (n, s) => os.write.over(params.outputDirectory / n, s) }
+      writeWpConfig(params, _bundleFilename)
+      writePackageJson().apply(params)
+      val logger = T.ctx().log
+      val npmInstall = os.proc("npm", "install").call(params.outputDirectory)
+      logger.debug(npmInstall.out.text())
+      os.proc("node", params.copiedInputFile).call(params.outputDirectory)
+    }
   }
 }
