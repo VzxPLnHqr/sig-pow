@@ -77,7 +77,7 @@ object sigpow extends Module {
     def offset = os.up
     def ivyDeps = Agg(
       ivy"org.typelevel::cats-effect::3.3.12",
-      ivy"com.fiatjaf::scoin::0.2-2817cfc-SNAPSHOT",
+      ivy"com.fiatjaf::scoin::0.2.2-SNAPSHOT",//0.2-4dae8f0-SNAPSHOT", //0.2-f46c947-SNAPSHOT", //0.2-cc40d68-SNAPSHOT",//0.2-b52c5f3-SNAPSHOT", //0.2-2817cfc-SNAPSHOT",
       ivy"org.typelevel::spire::0.18.0",
       ivy"co.fs2::fs2-io::3.2.12"
     )
