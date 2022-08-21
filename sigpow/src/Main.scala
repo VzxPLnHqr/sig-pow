@@ -10,11 +10,11 @@ import cats.syntax.all._
 import cats.effect._
 import cats.effect.syntax.all._
 
-object Main extends IOApp.Simple {
+trait SigPowMainIOApp extends IOApp.Simple {
 
     //for testing purposes, a "default" sig length
     val defaultMaxSigLength = 73 // 73 bytes means any signature should pass max size check
-    val run = for {
+    val runMain = for {
         _ <- IO.println("""| Please enter one of the following commands:
                             | lock - This will guide through creating a work-locked utxo.
                             |
@@ -240,7 +240,8 @@ object Main extends IOApp.Simple {
       * Helper functions
       */
 
-    def prompt(msg: String): IO[String] = IO.print(msg + " ") >> IO.readLine
+    def prompt(msg: String): IO[String] = IO.print(msg + " ") >> IO.readLine.flatTap(m => IO.println(s"you entered: $m"))
+    
     def prompt[A](msg: String, default: A)(f: => String => A): IO[A] = promptWithDefault(msg,default)(f)
     def promptBool(msg: String, default: Boolean): IO[Boolean] = prompt(msg).map(_.toUpperCase()).map{
       case "Y" | "yes" | "1" => true
