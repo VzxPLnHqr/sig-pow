@@ -14,6 +14,8 @@ trait SigPowMainIOApp extends IOApp.Simple {
 
     //for testing purposes, a "default" sig length
     val defaultMaxSigLength = 73 // 73 bytes means any signature should pass max size check
+    val defaultNumSigs = 16 // anything larger than 15 might overflow max script ops limit
+
     val runMain = for {
         _ <- IO.println("""| Please enter one of the following commands:
                             | lock - This will guide through creating a work-locked utxo.
@@ -106,7 +108,7 @@ trait SigPowMainIOApp extends IOApp.Simple {
         num_possible_sigs <- IO(log(block_range.toDouble,2).ceil.toInt)
         _ <- IO.println(s"we will need $num_possible_sigs signatures to encode a number in this range")
         _ <- IO.println("note: with our current encoding mechanism, using more than approximately 14 signatures may create a bitcoin script with too many non-push operatiosn (an invalid script).")
-        num_sigs <- prompt(s"How many signatures should we use? (default: $num_possible_sigs)",num_possible_sigs)(_.toInt)
+        num_sigs <- prompt(s"How many signatures should we use? (default: $defaultNumSigs)",defaultNumSigs)(_.toInt)
         priv_keys <- SigPow.generateKeysfromHashedSeed[IO](num_sigs,h_seed)
         _ <- IO.println("""| Now we need to calibrate your work-lock. A signature
                            | for each private key will be required to spend the
@@ -195,7 +197,7 @@ trait SigPowMainIOApp extends IOApp.Simple {
       _ <- IO.println(s"output index $fundingOutputIndex has $worklockedSatsAmt sats work-locked!")
       seedString <- prompt("What is the seed string which was used to generate the private keys? (default: abc)","abc")(s => s)
       h_seed = Crypto.sha256(ByteVector(seedString.getBytes("UTF-8")))
-      num_sigs <- prompt("How many private keys do we need? (default: 23)",23)(_.toInt)
+      num_sigs <- prompt(s"How many private keys do we need? (default: $defaultNumSigs)",defaultNumSigs)(_.toInt)
       sig_sizes <- prompt(s"What are the signature lengths, in bytes, for each of the keys? Example: 70,62,68..73,70 (default is all sigs $defaultMaxSigLength bytes)",List.fill(num_sigs)(defaultMaxSigLength))(_.split(",").toList.map(_.toInt))
       priv_keys <- SigPow.generateKeysfromHashedSeed[IO](num_sigs,h_seed)
       _ <- IO.println("(index_i, private_key_i, pub_key_i, max_siglength_bytes_i)")

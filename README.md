@@ -305,15 +305,26 @@ Then, the sidechain essentially evaporates.
    chain work in tandem to (in expectation) produce this outcome.
 
 ## Building / Usage (application)
-The application currently being built is also a demonstration of how Scala can be compiled to JVM code as well as
-native code using [Scala Native]https://scala-native.org. 
-1. use the [Nix](https://nixos.org) package manager to install dependencies by first installing Nix and then running `nix-shell scala-native.nix`. This will use nix to ensure that the necessary dependencies are available in your environment.
-2. for the build, we use the `mill` build tool [Mill Website](https://com-lihaoyi.github.io/mill), which also requires java
-3. a bootstrap script for mill has been checked into the repository already
+The application currently being built is also a demonstration of how Scala can be compiled to JVM code,
+native code using [Scala Native]https://scala-native.org, and javascript using [Scala-JS](https://scala-js.org)
+
+* for the build, we use the `mill` build tool [Mill Website](https://com-lihaoyi.github.io/mill), which also requires java
+* a bootstrap script for mill has been checked into the repository already
+
 ### JVM
-4. `./mill -i sigpow.jvm[3.1.3].run` runs the `jvm` module defined in `bulid.sc`(the `-i` allows for `readLine` and `ctrl+C` to work properly, and the `3.1.3` is the desired Scala version to use).
+1. `./mill -i sigpow.jvm[3.1.3].run` runs the `jvm` module defined in `bulid.sc`(the `-i` allows for `readLine` and `ctrl+C` to work properly, and the `3.1.3` is the desired Scala version to use).
+
 ### Scala Native
-4. `./mill show sigpow.native[3.1.3,0.4.5].nativeLink` will compile the application to native code which can then be run directly.
+1. use the [Nix](https://nixos.org) package manager to install dependencies by first installing Nix and then running `nix-shell scala-native.nix`. This will use nix to ensure that the necessary dependencies are available in your environment.
+2. `./mill show sigpow.native[3.1.3,0.4.5].nativeLink` will compile the application to native code which can then be run directly from a shell.
+3. or run `./mill -i sigpow.native[3.1.3,0.4.5].run`
+
+### ScalaJS (NodeJS)
+1. make sure you have `node` and `npm` installed and available on the command line: `nix-shell -p nodejs` should get you a recent enough version.
+2. `./mill -i sigpow.js[3.1.3,1.10.1].runNode` will compile the scala to javascript, pull in the javascript dependencies, webpack them, and then run the application via `node`.
+
+### ScalaJS (Browser)
+1. Under construction. Check back later or submit a pull request.
 
 ## Building / Usage (worksheets)
 There are some exploratory worksheets written in scala as an [
