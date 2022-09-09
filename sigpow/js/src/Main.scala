@@ -37,12 +37,17 @@ object Main extends IOWebApp {
         
         myprograms.runMain.background.flatMap { _ => 
             div(
-                div(out.map(xs => ul(xs.map(li(_))))),
+                div(out.map(xs => ul(xs.map(x => li(pre(x)))))),
                 input(
-                    placeholder <-- disableIn.map{ case true => ""; case false => "type here and press enter when done (or press enter to accept default)"},
+                    placeholder <-- disableIn.map{ case true => ""; case false => "type here and press enter"},
                     onKeyUp --> (_.filter(_.keyCode == 13).mapToTargetValue.foreach(v => in.set(v) >> submitted.set(true))),
                     disabled <-- disableIn,
                     value <-- in
+                ),
+                button(
+                    "OK",
+                    disabled <-- disableIn,
+                    onClick --> (_.mapToTargetValue.foreach(_ => submitted.set(true)))
                 )
             )
              
