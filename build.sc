@@ -79,15 +79,17 @@ object sigpow extends Module {
       ivy"org.typelevel::cats-effect::3.3.12",
       ivy"com.fiatjaf::scoin::0.3.0-SNAPSHOT",//0.2-4dae8f0-SNAPSHOT", //0.2-f46c947-SNAPSHOT", //0.2-cc40d68-SNAPSHOT",//0.2-b52c5f3-SNAPSHOT", //0.2-2817cfc-SNAPSHOT",
       ivy"org.typelevel::spire::0.18.0",
-      ivy"co.fs2::fs2-io::3.2.12"
+      ivy"co.fs2::fs2-io::3.2.12",
+      ivy"com.armanbilge::calico::0.1.1" //for building web ui
     )
-    def moduleKind = T { ModuleKind.CommonJSModule }
+    def moduleKind = T { ModuleKind.ESModule }
     def scalaJSVersion = "1.10.1"
 
     def mainClass = Some("vzxplnhqr.sigpow.js.Main")
 
     override def jsDeps = T {
       super.jsDeps() ++ JsDeps(
+        //"crypto-browserfy" -> "3.12.0", // weird webpack requirement?
         "@noble/secp256k1" -> "1.6.3", // required by scoin
         "hash.js" -> "1.1.7",          // required by scoin
         "chacha" -> "2.1.0"            // required by scoin
@@ -97,18 +99,55 @@ object sigpow extends Module {
     def sources = T.sources(super.sources() ++ Seq(PathRef(build.millSourcePath / "sigpow" / "js" / "src")))
     //def sources = T.sources(Seq(PathRef(build.millSourcePath / "sigpow" / "js" / "src")))
 
-    def runNode() = T.command {
+    def npmInstall = T {
       val params = WebpackParams(fastOpt().path, jsDeps(), T.ctx().dest, opt = false, None)
       val _bundleFilename = bundleFilename()
       if (params.inputFile != params.copiedInputFile)
         os.copy.over(params.inputFile, params.copiedInputFile)
-      params.jsDeps.jsSources foreach { case (n, s) => os.write.over(params.outputDirectory / n, s) }
-      writeWpConfig(params, _bundleFilename)
+      
+      //params.jsDeps.jsSources foreach { case (n, s) => os.write.over(params.outputDirectory / n, s) }
+      //writeWpConfig(params, _bundleFilename)
+    
       writePackageJson().apply(params)
       val logger = T.ctx().log
-      val npmInstall = os.proc("npm", "install").call(params.outputDirectory)
-      logger.debug(npmInstall.out.text())
-      os.proc("node", params.copiedInputFile).call(cwd=params.outputDirectory,stdin=os.Inherit,stdout=os.Inherit,stderr=os.Inherit)
+      val npmInstall_proc = os.proc("npm", "install").call(params.outputDirectory)
+      logger.debug(npmInstall_proc.out.text())
+      PathRef(T.dest)
+    }
+
+    def runNode() = T.command {
+      val outDir = npmInstall().path
+      val outFile = outDir / fastOpt().path.last
+      os.proc("node", outFile).call(cwd=outDir,stdin=os.Inherit,stdout=os.Inherit,stderr=os.Inherit)
+    }
+  }
+  
+  object devWebServer extends ScalaModule {
+    def scalaVersion = "3.1.3"
+
+    def ivyDeps = Agg(
+      ivy"com.lihaoyi::cask:0.8.3"
+    )
+
+    def indexHtml = T.source {
+      PathRef(js("3.1.3","1.10.1").millSourcePath / "src" / "resources" / "index.html")
+    }
+
+    def www = T {
+      val dir = T.ctx().dest
+      PathRef(dir)
+    }
+
+    override def compile = T {
+      val publicDir = www().path
+      js("3.1.3","1.10.1").devWebpack.apply().foreach {
+        pathref => os.copy.over(pathref.path, publicDir / pathref.path.last)
+      }
+      os.copy.over(js("3.1.3","1.10.1").fastOpt().path / os.up / "out.js.map", publicDir / "out.js.map")
+      val indexHtmlPath =indexHtml().path
+      val indexHtmlFileName = indexHtmlPath.last
+      os.copy.over(indexHtmlPath, publicDir / indexHtmlFileName )
+      super.compile.apply()
     }
   }
 }

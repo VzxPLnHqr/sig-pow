@@ -10,7 +10,7 @@ import cats.syntax.all._
 import cats.effect._
 import cats.effect.syntax.all._
 
-trait SigPowMainIOApp extends IOApp.Simple {
+trait SigPowMainIOApp {
 
     //for testing purposes, a "default" sig length
     val defaultMaxSigLength = 73 // 73 bytes means any signature should pass max size check

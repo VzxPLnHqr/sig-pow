@@ -45,6 +45,7 @@ object WebpackLib {
     os.write.over(
       params.outputDirectory / "package.json",
       ujson.Obj(
+        //"type" -> "module",
         "dependencies" -> deps.dependencies,
         "devDependencies" -> (deps.devDependencies ++ webpackDevDependencies)
       ).render(2) + "\n"
@@ -110,7 +111,7 @@ object WebpackLib {
 
   def writeWpConfig(params: WebpackParams, bundleFilename: String) = {
     val libraryOutputCfg =
-      params.libraryName.map(n => Map("library" -> n, "libraryTarget" -> "var")).getOrElse(Map.empty)
+      params.libraryName.map(n => Map("library" -> n, "libraryTarget" -> "umd")).getOrElse(Map.empty)
     val outputCfg =
       libraryOutputCfg ++ Map("path" -> params.outputDirectory.toString, "filename" -> bundleFilename)
     os.write.over(
@@ -119,7 +120,8 @@ object WebpackLib {
         "mode" -> (if (params.opt) "production" else "development"),
         "devtool" -> "source-map",
         "entry" -> params.copiedInputFile.toString,
-        "output" -> ujson.Obj.from(outputCfg.view.mapValues(ujson.Str))
+        "output" -> ujson.Obj.from(outputCfg.view.mapValues(ujson.Str)),
+        "resolve" -> ujson.Obj("fallback" -> ujson.Obj("crypto" -> false))
       ).render(2) + ";\n"
     )
   }

@@ -2,25 +2,55 @@ package vzxplnhqr.sigpow.js
 
 import vzxplnhqr.sigpow.SigPowMainIOApp
 
-import cats.effect._
+//import cats.effect._
 import scoin._
 import scodec.bits.ByteVector
 
-object Main extends SigPowMainIOApp {
+import calico.*
+import calico.unsafe.given
+import calico.dsl.io.*
+import calico.syntax.*
+import cats.effect.*
+import cats.effect.syntax.all.*
+import fs2.*
+import fs2.concurrent.*
+import scala.concurrent.duration.DurationInt
+import cats.syntax.all.*
 
-    
-    def run = IO.println("hello from javascript")
-              >> runMain >> IO.unit
+object Main extends IOWebApp {
 
-    /**
-      * Helper functions and overrides
-      */
+    val stdOut = SignallingRef[IO].of(List.empty[String]).toResource
+    val stdIn = SignallingRef[IO].of("").toResource
+    val inputDisabledIO = SignallingRef[IO].of(true).toResource
+    val stdIO = (stdIn,stdOut,inputDisabledIO).tupled
 
-    // in javascript (nodejs) we provide our own readline function using
-    // fs2 streaming library. This is a hack, but seems to work.
-    private def _readLine = fs2.io.stdin[IO].map(_.toChar).takeWhile(b => (b != '\r') && (b != '\n')).compile.toList.map(l => String.valueOf(l.toArray))  //.head.compile.toList.flatMap(l => IO(l.head))
-    private def _print(msg: String) = fs2.Stream.eval(IO(msg)).through(fs2.io.stdoutLines(java.nio.charset.StandardCharsets.UTF_8)).compile.drain
-    
-    override def prompt(msg: String): IO[String] = _print(msg + " ") *> _readLine.map(_.trim).flatTap(m => _print(s"you entered: $m \n"))
+    val render = stdIO.flatMap { case (in,out, disableIn ) =>
+        /*val myprograms = new SigPowMainIOApp {
+            private def _println(msg: String): IO[Unit] = out.update(_.appended(msg))
+            private def _readLine: IO[String] = disableIn.set(false) >> in.waitUntil(_.nonEmpty) >> in.getAndSet("").flatTap(_ => disableIn.set(true))
 
+            override def printlnIO(msg: String): IO[Unit] = _println(msg)
+            override def printIO(msg: String): IO[Unit] = _println(msg)
+            override def prompt(msg: String): IO[String] = _println(msg) *> _readLine.map(_.trim).flatTap(m => _println(s"you entered: $m"))
+        }*/
+        
+        val prog2 = {
+          def _println(msg: String): IO[Unit] = out.update(_.appended(msg))
+          def _readLine: IO[String] = disableIn.set(false) >> in.waitUntil(_.nonEmpty) >> in.getAndSet("").flatTap(_ => disableIn.set(true))
+          _println("hello world")
+        }
+        
+        prog2.background.flatMap { _ => 
+            div(
+                div(out.map(xs => ul(xs.map(li(_))))),
+                input(
+                    placeholder <-- disableIn.map{ case true => ""; case false => "type here and press enter"},
+                    onKeyUp --> (_.filter(_.keyCode == 13).mapToTargetValue.foreach(in.set)),
+                    disabled <-- disableIn,
+                    value <-- in
+                )
+            )
+             
+        }
+    }
 }
