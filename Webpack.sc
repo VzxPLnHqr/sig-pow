@@ -111,7 +111,7 @@ object WebpackLib {
 
   def writeWpConfig(params: WebpackParams, bundleFilename: String) = {
     val libraryOutputCfg =
-      params.libraryName.map(n => Map("library" -> n, "libraryTarget" -> "umd")).getOrElse(Map.empty)
+      params.libraryName.map(n => Map("library" -> n, "libraryTarget" -> "var")).getOrElse(Map.empty)
     val outputCfg =
       libraryOutputCfg ++ Map("path" -> params.outputDirectory.toString, "filename" -> bundleFilename)
     os.write.over(
