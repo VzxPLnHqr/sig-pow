@@ -25,14 +25,14 @@ object Main extends IOWebApp {
     val stdIO = (stdIn,stdOut,inputDisabledIO).tupled
 
     val render = stdIO.flatMap { case (in,out, disableIn ) =>
-        /*val myprograms = new SigPowMainIOApp {
+        val myprograms = new SigPowMainIOApp {
             private def _println(msg: String): IO[Unit] = out.update(_.appended(msg))
             private def _readLine: IO[String] = disableIn.set(false) >> in.waitUntil(_.nonEmpty) >> in.getAndSet("").flatTap(_ => disableIn.set(true))
 
             override def printlnIO(msg: String): IO[Unit] = _println(msg)
             override def printIO(msg: String): IO[Unit] = _println(msg)
             override def prompt(msg: String): IO[String] = _println(msg) *> _readLine.map(_.trim).flatTap(m => _println(s"you entered: $m"))
-        }*/
+        }
         
         val prog2 = {
           def _println(msg: String): IO[Unit] = out.update(_.appended(msg))
