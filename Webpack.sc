@@ -45,7 +45,6 @@ object WebpackLib {
     os.write.over(
       params.outputDirectory / "package.json",
       ujson.Obj(
-        //"type" -> "module",
         "dependencies" -> deps.dependencies,
         "devDependencies" -> (deps.devDependencies ++ webpackDevDependencies)
       ).render(2) + "\n"
@@ -167,7 +166,7 @@ object WebpackLib {
           .call(params.outputDirectory)
       logger.debug(webpack.out.text())
       if (params.inputFile != params.copiedInputFile)
-      os.remove(params.copiedInputFile)
+        os.remove(params.copiedInputFile)
       List(
         PathRef(params.outputDirectory / _bundleFilename),
         PathRef(params.outputDirectory / (_bundleFilename + ".map"))

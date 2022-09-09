@@ -40,7 +40,7 @@ object Main extends IOWebApp {
           _println("hello world")
         }
         
-        prog2.background.flatMap { _ => 
+        myprograms.runMain.background.flatMap { _ => 
             div(
                 div(out.map(xs => ul(xs.map(li(_))))),
                 input(

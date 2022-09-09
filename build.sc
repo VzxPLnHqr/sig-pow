@@ -73,16 +73,16 @@ object sigpow extends Module {
   }
 
   object js extends Cross[JsSigPowModule](scalaJSVersions: _*)
-  class JsSigPowModule extends SigPowMainModule(crossScalaVersion="3.1.3") with ScalaJSWebpackLibraryModule {
+  class JsSigPowModule extends SigPowMainModule(crossScalaVersion="3.1.3") with ScalaJSWebpackApplicationModule {
     def offset = os.up
     def ivyDeps = Agg(
-      ivy"org.typelevel::cats-effect::3.3.12",
+      //ivy"org.typelevel::cats-effect::3.3.12",
       ivy"com.fiatjaf::scoin::0.3.0-SNAPSHOT",//0.2-4dae8f0-SNAPSHOT", //0.2-f46c947-SNAPSHOT", //0.2-cc40d68-SNAPSHOT",//0.2-b52c5f3-SNAPSHOT", //0.2-2817cfc-SNAPSHOT",
       ivy"org.typelevel::spire::0.18.0",
       ivy"co.fs2::fs2-io::3.2.12",
       ivy"com.armanbilge::calico::0.1.1" //for building web ui
     )
-    def moduleKind = T { ModuleKind.ESModule }
+    def moduleKind = T { ModuleKind.CommonJSModule }
     def scalaJSVersion = "1.10.1"
 
     def mainClass = Some("vzxplnhqr.sigpow.js.Main")
@@ -121,7 +121,7 @@ object sigpow extends Module {
       os.proc("node", outFile).call(cwd=outDir,stdin=os.Inherit,stdout=os.Inherit,stderr=os.Inherit)
     }
   }
-  
+
   object devWebServer extends ScalaModule {
     def scalaVersion = "3.1.3"
 
