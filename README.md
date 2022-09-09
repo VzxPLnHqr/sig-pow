@@ -59,7 +59,11 @@ More work will produce tickets with a sooner nLocktime.
 
 In essence, this is **provably fair proof of future proof of work (PoFpOW?)**.
 
-#### Live (Signet) Example
+#### Ugly Demo
+* There is a very ugly, but working demo of the work-a-lot-tery concept [available here](https://vzxplnhqr.github.io/sig-pow/).
+* Demo is very much a work in progress. Do not use real funds.
+
+#### (Signet) Example Spending a Work-lock
 The first output (index 0) of [this transaction on signet](https://mempool.space/signet/tx/f946a09f1f33b92506c39993532070247eae36921c70543ff386c578a78397b1) funds a naive work-lock which 
 requires 4 signatures to each be less than or equal 73 bytes. All such bitcoin
 signatures meet this criteria, so it was a trivial work-lock to "solve," but you
@@ -322,9 +326,11 @@ native code using [Scala Native]https://scala-native.org, and javascript using [
 ### ScalaJS (NodeJS)
 1. make sure you have `node` and `npm` installed and available on the command line: `nix-shell -p nodejs` should get you a recent enough version.
 2. `./mill -i sigpow.js[3.1.3,1.10.1].runNode` will compile the scala to javascript, pull in the javascript dependencies, webpack them, and then run the application via `node`.
+3. Note: the nodejs version is currently broken in favor of building the browser version (see below). If you want non-browser, use the native or jvm version.
 
 ### ScalaJS (Browser)
-1. Under construction. Check back later or submit a pull request.
+1. A very minimal [live demo](https://vzxplnhqr.github.io/sig-pow/) which is just serving up the `./www` directory of this repository.
+2. Demo published to github pages using `git subtree push --prefix www origin gh-pages`
 
 ## Building / Usage (worksheets)
 There are some exploratory worksheets written in scala as an [
