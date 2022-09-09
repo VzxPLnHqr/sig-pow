@@ -22,30 +22,25 @@ object Main extends IOWebApp {
     val stdOut = SignallingRef[IO].of(List.empty[String]).toResource
     val stdIn = SignallingRef[IO].of("").toResource
     val inputDisabledIO = SignallingRef[IO].of(true).toResource
-    val stdIO = (stdIn,stdOut,inputDisabledIO).tupled
+    val submittedIO = SignallingRef[IO].of(false).toResource
+    val stdIO = (stdIn,stdOut,inputDisabledIO,submittedIO).tupled
 
-    val render = stdIO.flatMap { case (in,out, disableIn ) =>
+    val render = stdIO.flatMap { case (in,out, disableIn, submitted ) =>
         val myprograms = new SigPowMainIOApp {
             private def _println(msg: String): IO[Unit] = out.update(_.appended(msg))
-            private def _readLine: IO[String] = disableIn.set(false) >> in.waitUntil(_.nonEmpty) >> in.getAndSet("").flatTap(_ => disableIn.set(true))
+            private def _readLine: IO[String] = disableIn.set(false) >> submitted.waitUntil(_ == true) >> in.getAndSet("").flatTap(_ => disableIn.set(true) >> submitted.set(false))
 
             override def printlnIO(msg: String): IO[Unit] = _println(msg)
             override def printIO(msg: String): IO[Unit] = _println(msg)
             override def prompt(msg: String): IO[String] = _println(msg) *> _readLine.map(_.trim).flatTap(m => _println(s"you entered: $m"))
         }
         
-        val prog2 = {
-          def _println(msg: String): IO[Unit] = out.update(_.appended(msg))
-          def _readLine: IO[String] = disableIn.set(false) >> in.waitUntil(_.nonEmpty) >> in.getAndSet("").flatTap(_ => disableIn.set(true))
-          _println("hello world")
-        }
-        
         myprograms.runMain.background.flatMap { _ => 
             div(
                 div(out.map(xs => ul(xs.map(li(_))))),
                 input(
-                    placeholder <-- disableIn.map{ case true => ""; case false => "type here and press enter"},
-                    onKeyUp --> (_.filter(_.keyCode == 13).mapToTargetValue.foreach(in.set)),
+                    placeholder <-- disableIn.map{ case true => ""; case false => "type here and press enter when done (or press enter to accept default)"},
+                    onKeyUp --> (_.filter(_.keyCode == 13).mapToTargetValue.foreach(v => in.set(v) >> submitted.set(true))),
                     disabled <-- disableIn,
                     value <-- in
                 )
