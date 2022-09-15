@@ -1,1 +1,1 @@
-This directory simply holds some static assets which are served up by github pages.
+### This directory simply holds some static assets which are served up by github pages.
