@@ -160,11 +160,16 @@ object sigpow extends Module {
       val indexHtmlFileName = indexHtmlPath.last
       os.copy.over(indexHtmlPath, demoDir / indexHtmlFileName )
       PathRef(demoDir)
+      //note: this only updates the local demo. To push demo to github pages
+      // 1. commit any demo related changes in www/ directory
+      // 2. run `git subtree push --prefix www origin gh-pages`
     }
 
-    def commitDemo = T {
-      val rootDir = updateDemo().path / os.up
-      
+    // push the latest committed demo up to github pages
+    def pushDemo = T.command {
+      val rootDir = millSourcePath / os.up / os.up
+      os.proc("git","subtree","push","--prefix","www","origin","gh-pages")
+        .call(cwd=rootDir,stdin=os.Inherit,stdout=os.Inherit,stderr=os.Inherit)
     }
   }
 }
