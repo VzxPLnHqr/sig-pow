@@ -166,7 +166,7 @@ object sigpow extends Module {
     }
 
     // push the latest committed demo up to github pages
-    def pushDemo = T.command {
+    def pushDemo() = T.command {
       val rootDir = millSourcePath / os.up / os.up
       os.proc("git","subtree","push","--prefix","www","origin","gh-pages")
         .call(cwd=rootDir,stdin=os.Inherit,stdout=os.Inherit,stderr=os.Inherit)
