@@ -115,6 +115,7 @@ object sigpow extends Module {
       PathRef(T.dest)
     }
 
+    // currently broken because this js project right now targets browser, not nodejs
     def runNode() = T.command {
       val outDir = npmInstall().path
       val outFile = outDir / fastOpt().path.last
@@ -148,6 +149,22 @@ object sigpow extends Module {
       val indexHtmlFileName = indexHtmlPath.last
       os.copy.over(indexHtmlPath, publicDir / indexHtmlFileName )
       super.compile.apply()
+    }
+
+    def updateDemo = T {
+      val demoDir = millSourcePath / os.up / os.up / "www"
+      js("3.1.3","1.10.1").devWebpack.apply().foreach {
+        pathref => os.copy.over(pathref.path, demoDir / pathref.path.last)
+      }
+      val indexHtmlPath =indexHtml().path
+      val indexHtmlFileName = indexHtmlPath.last
+      os.copy.over(indexHtmlPath, demoDir / indexHtmlFileName )
+      PathRef(demoDir)
+    }
+
+    def commitDemo = T {
+      val rootDir = updateDemo().path / os.up
+      
     }
   }
 }
