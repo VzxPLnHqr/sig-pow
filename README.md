@@ -1,6 +1,10 @@
 # sig-pow - work-locked outputs
 proof of work via ecdsa signature length
 
+##### Live Demo
+* A demo of the work-a-lot-tery concept [available here](https://vzxplnhqr.github.io/sig-pow/).
+* It is very much a work in progress. **Do not use real funds.**
+
 #### Why? We need reckless, but safe experimentation with bitcoin
 Work-locks might allow for "reckless, but safe" experimentation on mainchian bitcoin. 
 It would be reckless because it is real money at stake, but safe because it does not 
