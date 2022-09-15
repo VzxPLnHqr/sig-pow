@@ -37,6 +37,10 @@ object Main extends IOWebApp {
         
         myprograms.runMain.background.flatMap { _ => 
             div(
+                div(p(
+                    "Source code and some more explanation here: ",
+                    a("https://github.com/VzxPLnHqr/sig-pow", href := "https://github.com/VzxPLnHqr/sig-pow")
+                    )),
                 div(out.map(xs => ul(xs.map(x => li(pre(x)))))),
                 input(
                     placeholder <-- disableIn.map{ case true => ""; case false => "type here and press enter"},
