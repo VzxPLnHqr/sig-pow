@@ -94,7 +94,15 @@ can get an idea of how it works by inspecting the [spending transaction](https:/
    input for an `OP_CHECKLOCKTIMEVERIFY` calculation, is interesting.
 8. Calibrated appropriately, more work will unlock the output sooner.
 
+
 #### Work-a-lot-tery Economics - a first pass
+
+##### Disclaimer: There are some errors in the below economic analysis.
+The underlying concept of a work-lock is still very valid. The following
+musings of the author simply may not work as well as intended. Nevertheless,
+they are left here as inspiration for anyone else who may find work-locks
+interesting.
+
 The work-lock used above is completely "trustless" and "decentralized" in the sense
 that, once the work-lock has been funded and the parameters for it chosen, such as the 
 private keys used to mine, the redeem script, etc, then there need not be any central
